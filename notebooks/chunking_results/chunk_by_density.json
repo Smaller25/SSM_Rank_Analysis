@@ -1,0 +1,182 @@
+[
+  {
+    "unique_frac": 0.1,
+    "seed": 0,
+    "density_bits_per_tok": 1.0656201839447021,
+    "erank_mean_chunk": 32.0,
+    "erank_n_chunks": 8,
+    "epi_mean_chunk": 23.272727272727273,
+    "epi_n_chunks": 11
+  },
+  {
+    "unique_frac": 0.1,
+    "seed": 1,
+    "density_bits_per_tok": 1.0341640710830688,
+    "erank_mean_chunk": 36.57142857142857,
+    "erank_n_chunks": 7,
+    "epi_mean_chunk": 23.272727272727273,
+    "epi_n_chunks": 11
+  },
+  {
+    "unique_frac": 0.1,
+    "seed": 2,
+    "density_bits_per_tok": 0.8312647342681885,
+    "erank_mean_chunk": 32.0,
+    "erank_n_chunks": 8,
+    "epi_mean_chunk": 23.272727272727273,
+    "epi_n_chunks": 11
+  },
+  {
+    "unique_frac": 0.1,
+    "seed": 3,
+    "density_bits_per_tok": 0.6209883093833923,
+    "erank_mean_chunk": 32.0,
+    "erank_n_chunks": 8,
+    "epi_mean_chunk": 23.272727272727273,
+    "epi_n_chunks": 11
+  },
+  {
+    "unique_frac": 0.2,
+    "seed": 0,
+    "density_bits_per_tok": 1.4244861602783203,
+    "erank_mean_chunk": 51.2,
+    "erank_n_chunks": 5,
+    "epi_mean_chunk": 42.666666666666664,
+    "epi_n_chunks": 6
+  },
+  {
+    "unique_frac": 0.2,
+    "seed": 1,
+    "density_bits_per_tok": 1.5869991779327393,
+    "erank_mean_chunk": 42.666666666666664,
+    "erank_n_chunks": 6,
+    "epi_mean_chunk": 42.666666666666664,
+    "epi_n_chunks": 6
+  },
+  {
+    "unique_frac": 0.2,
+    "seed": 2,
+    "density_bits_per_tok": 1.2348378896713257,
+    "erank_mean_chunk": 51.2,
+    "erank_n_chunks": 5,
+    "epi_mean_chunk": 42.666666666666664,
+    "epi_n_chunks": 6
+  },
+  {
+    "unique_frac": 0.2,
+    "seed": 3,
+    "density_bits_per_tok": 1.149080514907837,
+    "erank_mean_chunk": 42.666666666666664,
+    "erank_n_chunks": 6,
+    "epi_mean_chunk": 42.666666666666664,
+    "epi_n_chunks": 6
+  },
+  {
+    "unique_frac": 0.35,
+    "seed": 0,
+    "density_bits_per_tok": 2.2647368907928467,
+    "erank_mean_chunk": 64.0,
+    "erank_n_chunks": 4,
+    "epi_mean_chunk": 64.0,
+    "epi_n_chunks": 4
+  },
+  {
+    "unique_frac": 0.35,
+    "seed": 1,
+    "density_bits_per_tok": 2.252720832824707,
+    "erank_mean_chunk": 64.0,
+    "erank_n_chunks": 4,
+    "epi_mean_chunk": 64.0,
+    "epi_n_chunks": 4
+  },
+  {
+    "unique_frac": 0.35,
+    "seed": 2,
+    "density_bits_per_tok": 2.0166921615600586,
+    "erank_mean_chunk": 51.2,
+    "erank_n_chunks": 5,
+    "epi_mean_chunk": 51.2,
+    "epi_n_chunks": 5
+  },
+  {
+    "unique_frac": 0.35,
+    "seed": 3,
+    "density_bits_per_tok": 1.951185941696167,
+    "erank_mean_chunk": 51.2,
+    "erank_n_chunks": 5,
+    "epi_mean_chunk": 64.0,
+    "epi_n_chunks": 4
+  },
+  {
+    "unique_frac": 0.6,
+    "seed": 0,
+    "density_bits_per_tok": 2.963512897491455,
+    "erank_mean_chunk": 85.33333333333333,
+    "erank_n_chunks": 3,
+    "epi_mean_chunk": 64.0,
+    "epi_n_chunks": 4
+  },
+  {
+    "unique_frac": 0.6,
+    "seed": 1,
+    "density_bits_per_tok": 3.5169014930725098,
+    "erank_mean_chunk": 51.2,
+    "erank_n_chunks": 5,
+    "epi_mean_chunk": 85.33333333333333,
+    "epi_n_chunks": 3
+  },
+  {
+    "unique_frac": 0.6,
+    "seed": 2,
+    "density_bits_per_tok": 3.21520733833313,
+    "erank_mean_chunk": 64.0,
+    "erank_n_chunks": 4,
+    "epi_mean_chunk": 64.0,
+    "epi_n_chunks": 4
+  },
+  {
+    "unique_frac": 0.6,
+    "seed": 3,
+    "density_bits_per_tok": 3.008955717086792,
+    "erank_mean_chunk": 64.0,
+    "erank_n_chunks": 4,
+    "epi_mean_chunk": 85.33333333333333,
+    "epi_n_chunks": 3
+  },
+  {
+    "unique_frac": 1.0,
+    "seed": 0,
+    "density_bits_per_tok": 4.191651821136475,
+    "erank_mean_chunk": 64.0,
+    "erank_n_chunks": 4,
+    "epi_mean_chunk": 85.33333333333333,
+    "epi_n_chunks": 3
+  },
+  {
+    "unique_frac": 1.0,
+    "seed": 1,
+    "density_bits_per_tok": 5.393146991729736,
+    "erank_mean_chunk": 51.2,
+    "erank_n_chunks": 5,
+    "epi_mean_chunk": 85.33333333333333,
+    "epi_n_chunks": 3
+  },
+  {
+    "unique_frac": 1.0,
+    "seed": 2,
+    "density_bits_per_tok": 4.613862991333008,
+    "erank_mean_chunk": 85.33333333333333,
+    "erank_n_chunks": 3,
+    "epi_mean_chunk": 85.33333333333333,
+    "epi_n_chunks": 3
+  },
+  {
+    "unique_frac": 1.0,
+    "seed": 3,
+    "density_bits_per_tok": 4.4983439445495605,
+    "erank_mean_chunk": 51.2,
+    "erank_n_chunks": 5,
+    "epi_mean_chunk": 85.33333333333333,
+    "epi_n_chunks": 3
+  }
+]
