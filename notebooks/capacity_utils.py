@@ -159,6 +159,76 @@ def S2_pred_entropy(bundle, input_ids):
             "pred_entropy_curve": ent[0].cpu().numpy()}
 
 
+# ----------------------------------------------------------------------------- S5/S6 (new)
+def renyi_rank(matrix, alpha=2.0):
+    """exp of the Rényi-alpha entropy of the normalized singular-value spectrum.
+    alpha->1 recovers effective_rank (Shannon); alpha=2 => participation ratio 1/sum(p_i^2)."""
+    if isinstance(matrix, torch.Tensor):
+        matrix = matrix.cpu().numpy()
+    s = np.linalg.svd(matrix, compute_uv=False)
+    p = s / (s.sum() + 1e-12)
+    if abs(alpha - 1.0) < 1e-6:
+        return float(np.exp(-np.sum(p * np.log(p + 1e-12))))
+    return float(np.exp((1.0 / (1.0 - alpha)) * np.log(np.sum(p ** alpha) + 1e-12)))
+
+
+def stable_rank(matrix):
+    """||M||_F^2 / ||M||_2^2 = sum(sigma^2)/max(sigma)^2  (cheap rank surrogate)."""
+    if isinstance(matrix, torch.Tensor):
+        matrix = matrix.cpu().numpy()
+    s = np.linalg.svd(matrix, compute_uv=False)
+    return float((s ** 2).sum() / (s.max() ** 2 + 1e-12))
+
+
+def S5_renyi_rank(bundle, input_ids, alpha=2.0):
+    """Matrix-based Rényi-alpha rank of the recurrent state (generalizes S1 eRank). Also stable rank."""
+    states = bundle.states(input_ids)
+    rr, sr = [], []
+    for st in states.values():
+        mats = [st] if st.dim() == 2 else [st[h] for h in range(st.shape[0])]
+        rr.append(np.mean([renyi_rank(m, alpha) for m in mats]))
+        sr.append(np.mean([stable_rank(m) for m in mats]))
+    return {"renyi_rank_mean": float(np.mean(rr)), "alpha": alpha,
+            "stable_rank_mean": float(np.mean(sr))}
+
+
+def _twonn_dim(X, discard_frac=0.1):
+    """TwoNN intrinsic-dimension estimate (Facco et al. 2017) for a point cloud X: (N, d)."""
+    from scipy.spatial.distance import pdist, squareform
+    D = squareform(pdist(X.astype(np.float64)))
+    np.fill_diagonal(D, np.inf)
+    r = np.sort(D, axis=1)
+    mu = r[:, 1] / (r[:, 0] + 1e-12)
+    mu = np.sort(mu[np.isfinite(mu) & (mu > 1)])
+    n = len(mu)
+    if n < 5:
+        return float("nan")
+    F = np.arange(1, n + 1) / (n + 1)
+    keep = max(3, int(n * (1 - discard_frac)))
+    x = np.log(mu[:keep]); y = -np.log(1.0 - F[:keep])
+    return float(np.sum(x * y) / (np.sum(x * x) + 1e-12))          # slope through origin
+
+
+def S6_intrinsic_dim(bundle, input_ids):
+    """Nonlinear intrinsic dimension (TwoNN) of the recurrent state, treating each per-(layer, head)
+    state matrix (flattened) as a point. Complements the linear rank measures S1/S5."""
+    states = bundle.states(input_ids)
+    pts = []
+    for st in states.values():
+        mats = [st] if st.dim() == 2 else [st[h] for h in range(st.shape[0])]
+        for m in mats:
+            v = m.cpu().numpy().reshape(-1) if isinstance(m, torch.Tensor) else np.asarray(m).reshape(-1)
+            pts.append(v)
+    X = np.stack(pts, 0)
+    return {"intrinsic_dim": _twonn_dim(X), "n_points": X.shape[0], "ambient_dim": X.shape[1]}
+
+
+# NOTE (TODO): predictive information / excess entropy (statistical complexity C_mu) =
+# I(past; future) is the most principled capacity target but needs a heavier estimator
+# (e.g. state as bottleneck: reduction in future NLL given the state, or a k-NN MI estimator
+# over (past-window, future-window) pairs). Left for a dedicated pass.
+
+
 @torch.no_grad()
 def S3_epiplexity(bundle, input_ids, tail_frac=0.2):
     if input_ids.dim() == 1:

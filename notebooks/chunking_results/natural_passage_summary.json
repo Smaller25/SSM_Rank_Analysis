@@ -1,0 +1,19 @@
+{
+  "n_passages": 48,
+  "spearman": {
+    "erank_mean_chunk": {
+      "rho_median": -0.008470757025287438,
+      "rho_ci95": [
+        -0.30164674372174266,
+        0.28319298759850164
+      ]
+    },
+    "epi_mean_chunk": {
+      "rho_median": NaN,
+      "rho_ci95": [
+        NaN,
+        NaN
+      ]
+    }
+  }
+}

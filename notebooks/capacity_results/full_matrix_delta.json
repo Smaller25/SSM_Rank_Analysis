@@ -1,30 +1,38 @@
 {
   "mamba2-370m": {
     "D1_mqar": {
-      "S1_erank": 4.961733128797883,
-      "S2_pred_entropy": 1.779073715209961,
-      "S2_bits_per_token": -3.681471824645996,
-      "S3_epiplexity_cum": 397.09005069732666,
+      "S1_erank": 4.9617628626680625,
+      "S5_renyi_rank": 1.7357630094047636,
+      "S6_intrinsic_dim": 11.57517198929321,
+      "S2_pred_entropy": 1.7789216041564941,
+      "S2_bits_per_token": -3.680830955505371,
+      "S3_epiplexity_cum": 397.1031723022461,
       "S4_gt_bits": 558.0
     },
     "D2_natural_language": {
-      "S1_erank": 4.205865054003274,
-      "S2_pred_entropy": 1.88184654712677,
-      "S2_bits_per_token": 0.9614377021789551,
-      "S3_epiplexity_cum": 325.12883949279785,
+      "S1_erank": 4.205914935252318,
+      "S5_renyi_rank": 1.6197001782711598,
+      "S6_intrinsic_dim": -6.264278208270525,
+      "S2_pred_entropy": 1.8815436363220215,
+      "S2_bits_per_token": 0.9613285064697266,
+      "S3_epiplexity_cum": 325.12795639038086,
       "S4_gt_bits": null
     },
     "D3_state_tracking": {
-      "S1_erank": 3.7759626962554953,
-      "S2_pred_entropy": 0.031253814697265625,
-      "S2_bits_per_token": -8.250833511352539,
-      "S3_epiplexity_cum": 263.5006523132324,
+      "S1_erank": 3.775942387214551,
+      "S5_renyi_rank": 1.2487725048170737,
+      "S6_intrinsic_dim": -8.800484285593583,
+      "S2_pred_entropy": 0.03169107437133789,
+      "S2_bits_per_token": -8.25108528137207,
+      "S3_epiplexity_cum": 263.50027084350586,
       "S4_gt_bits": 0.0
     }
   },
   "gdn-340m": {
     "D1_mqar": {
       "S1_erank": 18.940982546905673,
+      "S5_renyi_rank": -125000040437.78561,
+      "S6_intrinsic_dim": 119.74254889216749,
       "S2_pred_entropy": 2.034224510192871,
       "S2_bits_per_token": -5.552391052246094,
       "S3_epiplexity_cum": 368.6945343017578,
@@ -32,6 +40,8 @@
     },
     "D2_natural_language": {
       "S1_erank": 16.77503518139323,
+      "S5_renyi_rank": -141666712498.33646,
+      "S6_intrinsic_dim": -10.9776557908352,
       "S2_pred_entropy": -3.5261332988739014,
       "S2_bits_per_token": -8.067092973738909,
       "S3_epiplexity_cum": 291.0203609466553,
@@ -39,6 +49,8 @@
     },
     "D3_state_tracking": {
       "S1_erank": 17.003471034516892,
+      "S5_renyi_rank": -116666704409.25877,
+      "S6_intrinsic_dim": 488.9953719508871,
       "S2_pred_entropy": 2.151801109313965,
       "S2_bits_per_token": -10.38294506072998,
       "S3_epiplexity_cum": 379.8652629852295,
