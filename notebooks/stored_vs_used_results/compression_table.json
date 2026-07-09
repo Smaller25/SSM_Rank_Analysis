@@ -1,0 +1,16 @@
+{
+  "mamba2-370m": {
+    "state_Mfloat": 12.582912,
+    "C_used@0.9": 23.34426214097286,
+    "C_used@0.5": 128.0,
+    "C_stored@0.9": 0.0,
+    "used_bits_per_Mfloat": 11.131411619650295
+  },
+  "gdn-340m": {
+    "state_Mfloat": 31.45728,
+    "C_used@0.9": 11.04761900117914,
+    "C_used@0.5": 128.0,
+    "C_stored@0.9": 0.0,
+    "used_bits_per_Mfloat": 2.1071660997732424
+  }
+}
