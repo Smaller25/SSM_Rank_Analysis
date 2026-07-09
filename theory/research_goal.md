@@ -40,3 +40,33 @@ Detecting saturation and **dynamically chunking** the stream (snapshot/reuse mul
 - `state_capacity_decodable.ipynb` — recall vs eRank; load vs horizon (E1).
 - `stored_vs_used_gap.ipynb` — bilinear-probe stored vs used (E2).
 - `capacity_utils.py` — shared loaders / state extraction / signals.
+
+## Pilot context (memory-routing / SSC) & the open questions
+The bigger project: fix long-context recall by **freezing saturated states and routing over them**
+(SSC / LLM-memory-routing). Pilot finding (fixed-length snapshots + routing):
+- **single-query recall improves dramatically** (routing avoids whole-context saturation; one chunk, one read).
+- **multi-query recall drops** — and the diagnosis is **"the right chunk is found, but retrieval *within*
+  the chunk fails"** — i.e. the per-chunk state is itself saturated for multiple keys. Same count/capacity
+  ceiling, now inside a chunk.
+
+Open questions:
+- **Q1 — which states to store?** (can't keep all). = an eviction/selection policy driven by a saturation
+  signal.
+- **Q2 — why does multi-query fail *inside* the found chunk?** → is the info still there but unread
+  (`stored>used`) or genuinely gone (`stored≈used`)? → **nb4 (E2)**.
+- **Q3 — dynamic (not fixed-length) chunking needs an unsupervised, contents-based saturation signal** →
+  pick it by comparing **S1–S6 vs actual recall** (nb1/nb3).
+
+## Why this matters — the compression-ratio test (the make-or-break criterion)
+This methodology is worthwhile **only if one frozen chunk-state reliably serves several keys** (k ≫ 1):
+- **k ≫ 1** → you store far fewer states than a full KV cache yet keep recall → you keep the SSM's
+  small-memory / linear-cost advantage **and** extend capacity → **meaningful**.
+- **k ≈ 1** → to save multi-query you'd chunk down to one item per state = storing everything =
+  **you've just re-invented the attention KV cache** → the SSM advantage is gone → **not meaningful**
+  (and Q1 collapses into the KV-eviction problem attention already has).
+
+So the real research question is **not "does routing help"** but **"how many keys does one frozen
+state compress (the per-chunk compression ratio) vs a KV cache?"** — which is exactly what nb3/nb4
+measure. The pilot's "multi-query found-but-not-retrieved" is a warning that per-chunk effective
+capacity may be ~1; **nb4 decides**: (a) `stored>used` → better read-out rescues it; (b) `stored≈used`
+→ per-chunk capacity is genuinely small → compression ratio is poor → the method's value is at risk.
