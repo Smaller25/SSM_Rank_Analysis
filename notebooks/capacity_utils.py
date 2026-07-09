@@ -166,10 +166,13 @@ def renyi_rank(matrix, alpha=2.0):
     if isinstance(matrix, torch.Tensor):
         matrix = matrix.cpu().numpy()
     s = np.linalg.svd(matrix, compute_uv=False)
-    p = s / (s.sum() + 1e-12)
+    tot = s.sum()
+    if tot < 1e-8:                     # zero / unused matrix (e.g. an idle MoM memory) -> rank 1
+        return 1.0
+    p = s / tot
     if abs(alpha - 1.0) < 1e-6:
         return float(np.exp(-np.sum(p * np.log(p + 1e-12))))
-    return float(np.exp((1.0 / (1.0 - alpha)) * np.log(np.sum(p ** alpha) + 1e-12)))
+    return float(np.exp((1.0 / (1.0 - alpha)) * np.log(np.sum(p ** alpha))))
 
 
 def stable_rank(matrix):
@@ -198,7 +201,9 @@ def _twonn_dim(X, discard_frac=0.1):
     D = squareform(pdist(X.astype(np.float64)))
     np.fill_diagonal(D, np.inf)
     r = np.sort(D, axis=1)
-    mu = r[:, 1] / (r[:, 0] + 1e-12)
+    r1, r2 = r[:, 0], r[:, 1]
+    ok = r1 > 1e-9                              # drop points with a duplicate (r1==0) neighbour
+    mu = r2[ok] / r1[ok]
     mu = np.sort(mu[np.isfinite(mu) & (mu > 1)])
     n = len(mu)
     if n < 5:
@@ -220,7 +225,9 @@ def S6_intrinsic_dim(bundle, input_ids):
             v = m.cpu().numpy().reshape(-1) if isinstance(m, torch.Tensor) else np.asarray(m).reshape(-1)
             pts.append(v)
     X = np.stack(pts, 0)
-    return {"intrinsic_dim": _twonn_dim(X), "n_points": X.shape[0], "ambient_dim": X.shape[1]}
+    X = X[np.linalg.norm(X, axis=1) > 1e-8]        # drop zero (unused-memory) state matrices
+    dim = _twonn_dim(X) if X.shape[0] >= 6 else float("nan")
+    return {"intrinsic_dim": dim, "n_points": int(X.shape[0]), "ambient_dim": int(X.shape[1] if X.ndim > 1 else 0)}
 
 
 # NOTE (TODO): predictive information / excess entropy (statistical complexity C_mu) =
