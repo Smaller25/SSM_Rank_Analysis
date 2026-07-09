@@ -204,14 +204,16 @@ def _twonn_dim(X, discard_frac=0.1):
     r1, r2 = r[:, 0], r[:, 1]
     ok = r1 > 1e-9                              # drop points with a duplicate (r1==0) neighbour
     mu = r2[ok] / r1[ok]
-    mu = np.sort(mu[np.isfinite(mu) & (mu > 1)])
+    mu = np.sort(mu[np.isfinite(mu) & (mu > 1 + 1e-9)])
     n = len(mu)
-    if n < 5:
+    if n < 10:
         return float("nan")
     F = np.arange(1, n + 1) / (n + 1)
     keep = max(3, int(n * (1 - discard_frac)))
     x = np.log(mu[:keep]); y = -np.log(1.0 - F[:keep])
-    return float(np.sum(x * y) / (np.sum(x * x) + 1e-12))          # slope through origin
+    d = float(np.sum(x * y) / (np.sum(x * x) + 1e-12))            # slope through origin
+    # implausible fit (too few well-separated neighbours in very high ambient dim) -> nan
+    return d if (np.isfinite(d) and 0 < d <= n) else float("nan")
 
 
 def S6_intrinsic_dim(bundle, input_ids):
@@ -225,8 +227,13 @@ def S6_intrinsic_dim(bundle, input_ids):
             v = m.cpu().numpy().reshape(-1) if isinstance(m, torch.Tensor) else np.asarray(m).reshape(-1)
             pts.append(v)
     X = np.stack(pts, 0)
-    X = X[np.linalg.norm(X, axis=1) > 1e-8]        # drop zero (unused-memory) state matrices
-    dim = _twonn_dim(X) if X.shape[0] >= 6 else float("nan")
+    norms = np.linalg.norm(X, axis=1)
+    X = X[norms > 1e-8]                            # drop zero (unused-memory) state matrices
+    if X.shape[0] >= 10:
+        X = X / np.linalg.norm(X, axis=1, keepdims=True)   # unit-normalize: angular (scale-free) ID
+        dim = _twonn_dim(X)
+    else:
+        dim = float("nan")
     return {"intrinsic_dim": dim, "n_points": int(X.shape[0]), "ambient_dim": int(X.shape[1] if X.ndim > 1 else 0)}
 
 
