@@ -15,8 +15,9 @@ import torch
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 MODELS = {
-    "mamba2-370m": {"hf": "state-spaces/mamba2-370m", "kind": "mamba2"},
-    "gdn-340m":    {"hf": "linear-moe-hub/MoM-Gated-Deltanet-340M", "kind": "gdn"},
+    "mamba2-370m":    {"hf": "state-spaces/mamba2-370m", "kind": "mamba2"},
+    "gdn-340m":       {"hf": "linear-moe-hub/MoM-Gated-Deltanet-340M", "kind": "gdn"},        # MoM variant
+    "gdn-plain-340m": {"hf": "linear-moe-hub/Gated-Deltanet-340M", "kind": "gdn_plain"},      # single-state GDN
 }
 
 
@@ -46,7 +47,7 @@ class ModelBundle:
         input_ids = input_ids.to(DEVICE)
         if self.kind == "mamba2":
             return _mamba2_states(self.model, input_ids)
-        if self.kind == "gdn":
+        if self.kind in ("gdn", "gdn_plain"):
             return _gdn_states(self.model, input_ids)
         raise ValueError(self.kind)
 
@@ -102,15 +103,20 @@ def load_bundle(name):
         tok = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
         model = MambaLMHeadModel.from_pretrained(spec["hf"], device=DEVICE, dtype=torch.float32).eval()
         return ModelBundle(name, model, tok, "mamba2")
-    if spec["kind"] == "gdn":
-        # linear-moe-hub checkpoints use a fused SwiGLU MLP + attn.D; adapt onto current fla.
+    if spec["kind"] in ("gdn", "gdn_plain"):
+        # linear-moe-hub checkpoints (MoM and plain GDN) share a fused SwiGLU MLP + attn.D that
+        # current fla dropped; adapt the weights onto current fla (split gate_proj, drop D).
         import fla  # noqa: F401
         from safetensors.torch import load_file
         from huggingface_hub import hf_hub_download
         from transformers import AutoTokenizer
-        from fla.models.mom import MomConfig, MomForCausalLM
-        MomForCausalLM._tied_weights_keys = {}
-        cfg = MomConfig.from_pretrained(spec["hf"])
+        if spec["kind"] == "gdn":
+            from fla.models.mom import MomConfig as CfgCls, MomForCausalLM as MdlCls          # MoM
+        else:
+            from fla.models.gated_deltanet import (GatedDeltaNetConfig as CfgCls,             # single-state
+                                                   GatedDeltaNetForCausalLM as MdlCls)
+        MdlCls._tied_weights_keys = {}
+        cfg = CfgCls.from_pretrained(spec["hf"])
         ckpt = load_file(hf_hub_download(spec["hf"], "model.safetensors"))
         sd = {}
         for k, v in ckpt.items():
@@ -122,11 +128,11 @@ def load_bundle(name):
                 sd[k.replace("gate_proj", "up_proj")] = v[half:]
             else:
                 sd[k] = v
-        model = MomForCausalLM(cfg)
+        model = MdlCls(cfg)
         model.load_state_dict(sd, strict=False)
         tok = AutoTokenizer.from_pretrained(spec["hf"])
         model = model.to(DEVICE).eval()
-        return ModelBundle(name, model, tok, "gdn")
+        return ModelBundle(name, model, tok, spec["kind"])
     raise ValueError(name)
 
 

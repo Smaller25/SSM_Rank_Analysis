@@ -6,6 +6,13 @@
     "C_stored@0.9": 0.0,
     "used_bits_per_Mfloat": 11.131411619650295
   },
+  "gdn-plain-340m": {
+    "state_Mfloat": 6.291456,
+    "C_used@0.9": 10.666666524444437,
+    "C_used@0.5": 128.0,
+    "C_stored@0.9": 0.0,
+    "used_bits_per_Mfloat": 10.172525906032979
+  },
   "gdn-340m": {
     "state_Mfloat": 31.45728,
     "C_used@0.9": 11.04761900117914,
