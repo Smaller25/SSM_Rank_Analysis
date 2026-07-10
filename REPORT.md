@@ -1,3 +1,5 @@
+> 🇰🇷 한국어판: [`REPORT.ko.md`](REPORT.ko.md)
+
 # Information Capacity of Fixed-Size Recurrent States — Interim Report
 
 Study of what limits associative recall in fixed-size recurrent LMs (Mamba-2 SSD vs Gated DeltaNet),
