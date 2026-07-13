@@ -1,0 +1,280 @@
+{
+  "LinearAttention": {
+    "mixer": "LinearAttention",
+    "decay": "no-decay",
+    "d_model": 256,
+    "n_head": 4,
+    "n_layer": 2,
+    "steps": 4000,
+    "train_loss": 3.4681291580200195,
+    "minutes": 4.74,
+    "rows": [
+      {
+        "N": 4,
+        "recall": 0.2734375,
+        "state_erank": 2.637819077819586,
+        "erank_maxrank": 64,
+        "erank_norm": 0.04121592309093103
+      },
+      {
+        "N": 8,
+        "recall": 0.17919921875,
+        "state_erank": 3.8240879364311695,
+        "erank_maxrank": 64,
+        "erank_norm": 0.059751374006737024
+      },
+      {
+        "N": 16,
+        "recall": 0.122802734375,
+        "state_erank": 5.176743116229773,
+        "erank_maxrank": 64,
+        "erank_norm": 0.0808866111910902
+      },
+      {
+        "N": 32,
+        "recall": 0.082275390625,
+        "state_erank": 6.80813997797668,
+        "erank_maxrank": 64,
+        "erank_norm": 0.10637718715588562
+      },
+      {
+        "N": 48,
+        "recall": 0.06656901041666667,
+        "state_erank": 7.740045087412,
+        "erank_maxrank": 64,
+        "erank_norm": 0.1209382044908125
+      },
+      {
+        "N": 64,
+        "recall": 0.06256103515625,
+        "state_erank": 8.272825483232737,
+        "erank_maxrank": 64,
+        "erank_norm": 0.1292628981755115
+      },
+      {
+        "N": 96,
+        "recall": 0.050252278645833336,
+        "state_erank": 8.922824719920754,
+        "erank_maxrank": 64,
+        "erank_norm": 0.1394191362487618
+      },
+      {
+        "N": 128,
+        "recall": 0.0445556640625,
+        "state_erank": 9.588381443172693,
+        "erank_maxrank": 64,
+        "erank_norm": 0.14981846004957333
+      }
+    ]
+  },
+  "DeltaNet": {
+    "error": "AssertionError: ChunkDeltaRuleFunction does not support float32. Please use bfloat16."
+  },
+  "GatedLinearAttention": {
+    "mixer": "GatedLinearAttention",
+    "decay": "decay",
+    "d_model": 256,
+    "n_head": 4,
+    "n_layer": 2,
+    "steps": 4000,
+    "train_loss": 3.3235561847686768,
+    "minutes": 3.19,
+    "rows": [
+      {
+        "N": 4,
+        "recall": 0.4072265625,
+        "state_erank": 4.132872246205807,
+        "erank_maxrank": 32,
+        "erank_norm": 0.12915225769393146
+      },
+      {
+        "N": 8,
+        "recall": 0.26171875,
+        "state_erank": 5.284323800355196,
+        "erank_maxrank": 32,
+        "erank_norm": 0.16513511876109987
+      },
+      {
+        "N": 16,
+        "recall": 0.162109375,
+        "state_erank": 4.965269412845373,
+        "erank_maxrank": 32,
+        "erank_norm": 0.1551646691514179
+      },
+      {
+        "N": 32,
+        "recall": 0.109375,
+        "state_erank": 4.6614727564156055,
+        "erank_maxrank": 32,
+        "erank_norm": 0.14567102363798767
+      },
+      {
+        "N": 48,
+        "recall": 0.08544921875,
+        "state_erank": 4.212942060083151,
+        "erank_maxrank": 32,
+        "erank_norm": 0.13165443937759846
+      },
+      {
+        "N": 64,
+        "recall": 0.07666015625,
+        "state_erank": 4.040134280920029,
+        "erank_maxrank": 32,
+        "erank_norm": 0.1262541962787509
+      },
+      {
+        "N": 96,
+        "recall": 0.061564127604166664,
+        "state_erank": 3.696147322654724,
+        "erank_maxrank": 32,
+        "erank_norm": 0.11550460383296013
+      },
+      {
+        "N": 128,
+        "recall": 0.052032470703125,
+        "state_erank": 3.5849729999899864,
+        "erank_maxrank": 32,
+        "erank_norm": 0.11203040624968708
+      }
+    ]
+  },
+  "MultiScaleRetention": {
+    "mixer": "MultiScaleRetention",
+    "decay": "decay",
+    "d_model": 256,
+    "n_head": 4,
+    "n_layer": 2,
+    "steps": 4000,
+    "train_loss": 2.7930243015289307,
+    "minutes": 1.68,
+    "rows": [
+      {
+        "N": 4,
+        "recall": 0.6494140625,
+        "state_erank": 5.457413848489523,
+        "erank_maxrank": 64,
+        "erank_norm": 0.0852720913826488
+      },
+      {
+        "N": 8,
+        "recall": 0.4228515625,
+        "state_erank": 8.754693627357483,
+        "erank_maxrank": 64,
+        "erank_norm": 0.13679208792746067
+      },
+      {
+        "N": 16,
+        "recall": 0.253173828125,
+        "state_erank": 12.421770356595516,
+        "erank_maxrank": 64,
+        "erank_norm": 0.19409016182180494
+      },
+      {
+        "N": 32,
+        "recall": 0.15478515625,
+        "state_erank": 16.770000968128443,
+        "erank_maxrank": 64,
+        "erank_norm": 0.2620312651270069
+      },
+      {
+        "N": 48,
+        "recall": 0.11629231770833333,
+        "state_erank": 18.189657241106033,
+        "erank_maxrank": 64,
+        "erank_norm": 0.28421339439228177
+      },
+      {
+        "N": 64,
+        "recall": 0.091796875,
+        "state_erank": 18.967463992536068,
+        "erank_maxrank": 64,
+        "erank_norm": 0.29636662488337606
+      },
+      {
+        "N": 96,
+        "recall": 0.06681315104166667,
+        "state_erank": 19.195565624162555,
+        "erank_maxrank": 64,
+        "erank_norm": 0.2999307128775399
+      },
+      {
+        "N": 128,
+        "recall": 0.053070068359375,
+        "state_erank": 19.554861553013325,
+        "erank_maxrank": 64,
+        "erank_norm": 0.3055447117658332
+      }
+    ]
+  },
+  "GatedDeltaNet": {
+    "mixer": "GatedDeltaNet",
+    "decay": "decay",
+    "d_model": 256,
+    "n_head": 4,
+    "n_layer": 2,
+    "steps": 4000,
+    "train_loss": 0.0002758815826382488,
+    "minutes": 9.59,
+    "rows": [
+      {
+        "N": 4,
+        "recall": 1.0,
+        "state_erank": 5.908842030912638,
+        "erank_maxrank": 256,
+        "erank_norm": 0.02308141418325249
+      },
+      {
+        "N": 8,
+        "recall": 1.0,
+        "state_erank": 9.33530518785119,
+        "erank_maxrank": 256,
+        "erank_norm": 0.03646603589004371
+      },
+      {
+        "N": 16,
+        "recall": 1.0,
+        "state_erank": 14.02537103742361,
+        "erank_maxrank": 256,
+        "erank_norm": 0.05478660561493598
+      },
+      {
+        "N": 32,
+        "recall": 1.0,
+        "state_erank": 21.100462932139635,
+        "erank_maxrank": 256,
+        "erank_norm": 0.08242368332867045
+      },
+      {
+        "N": 48,
+        "recall": 0.9999186197916666,
+        "state_erank": 26.22902694158256,
+        "erank_maxrank": 256,
+        "erank_norm": 0.10245713649055688
+      },
+      {
+        "N": 64,
+        "recall": 0.99981689453125,
+        "state_erank": 30.25958206690848,
+        "erank_maxrank": 256,
+        "erank_norm": 0.11820149244886125
+      },
+      {
+        "N": 96,
+        "recall": 0.9984130859375,
+        "state_erank": 34.37146520242095,
+        "erank_maxrank": 256,
+        "erank_norm": 0.13426353594695684
+      },
+      {
+        "N": 128,
+        "recall": 0.99114990234375,
+        "state_erank": 36.23777052387595,
+        "erank_maxrank": 256,
+        "erank_norm": 0.14155379110889044
+      }
+    ]
+  },
+  "Mamba2": {
+    "error": "ValueError: `num_heads * head_dim` (256) must equal `expand * hidden_size` (512)."
+  }
+}
