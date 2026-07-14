@@ -25,9 +25,10 @@ os.makedirs(RESULTS, exist_ok=True)
 KEY_OFF, VAL_OFF, VAL_VOCAB = 1000, 5000, 64   # ids < 32000 (all model vocabs >= 32000)
 
 MODELS = [
-    ("mamba2-370m",   "decay",    "mamba2", "state-spaces/mamba2-370m"),
-    ("gdn2-370m",     "decay",    "gdn2",   "gyung/gdn2-370m-fineweb-edu-100b"),
-    ("deltanet-1.3B", "no-decay", "fla",    "fla-hub/delta_net-1.3B-100B"),
+    ("mamba2-370m",   "decay",    "mamba2",    "state-spaces/mamba2-370m"),
+    ("gdn-plain-340m","decay",    "gdn_plain", "linear-moe-hub/Gated-Deltanet-340M"),  # single-state gated-delta
+    ("gdn2-370m",     "decay",    "gdn2",      "gyung/gdn2-370m-fineweb-edu-100b"),    # lit_gpt (crashes: fla ver)
+    ("deltanet-1.3B", "no-decay", "fla",       "fla-hub/delta_net-1.3B-100B"),
     ("gla-1.3B",      "decay",    "fla",    "fla-hub/gla-1.3B-100B"),
     ("retnet-1.3B",   "decay",    "fla",    "fla-hub/retnet-1.3B-100B"),
 ]
@@ -129,6 +130,28 @@ def load(kind, hf):
         try: Mdl._tied_weights_keys = {}
         except Exception: pass
         m = Mdl.from_pretrained(hf, torch_dtype=torch.bfloat16).to(DEVICE).eval()
+        return Bundle("fla", m)
+    if kind == "gdn_plain":       # linear-moe-hub plain Gated-DeltaNet -> fla native + fused-MLP/D adapter
+        import fla  # noqa
+        from safetensors.torch import load_file
+        from huggingface_hub import hf_hub_download
+        from fla.models.gated_deltanet import GatedDeltaNetConfig, GatedDeltaNetForCausalLM
+        try: GatedDeltaNetForCausalLM._tied_weights_keys = {}
+        except Exception: pass
+        cfg = GatedDeltaNetConfig.from_pretrained(hf)
+        ckpt = load_file(hf_hub_download(hf, "model.safetensors"))
+        sd = {}
+        for k, v in ckpt.items():
+            if k.endswith("attn.D"):
+                continue
+            if k.endswith("mlp.gate_proj.weight") and v.shape[0] % 2 == 0:
+                h = v.shape[0] // 2
+                sd[k] = v[:h]; sd[k.replace("gate_proj", "up_proj")] = v[h:]
+            else:
+                sd[k] = v
+        m = GatedDeltaNetForCausalLM(cfg)
+        m.load_state_dict(sd, strict=False)
+        m = m.to(DEVICE).to(torch.bfloat16).eval()
         return Bundle("fla", m)
     if kind == "gdn2":
         sys.path.insert(0, _lit_gpt_path())
