@@ -24,6 +24,11 @@ All results run on an RTX PRO 6000 (Blackwell) via SLURM; code in `notebooks/`, 
 5. **Update-rule compression ratio**: per unit state memory, **Mamba-2 SSD ≈ plain Gated-DeltaNet**
    (~10–11 recalled-bits / Mfloat); the **MoM mixture wrapper is much less efficient** (2.1). The
    headline "GDN recalls better" is not attributable to the gated-delta *update rule* here.
+6. **eRank ⊥ recall across update rules (decisive, §5).** On 5 pretrained rules, gated-delta and RetNet
+   share the same normalized eRank (~0.18) yet have opposite MQAR recall (0.47 vs 0.08); the eRank and
+   recall orderings are uncorrelated. So eRank is **not** a capacity/recall signal. What sets recall is the
+   **update-rule family** — delta / error-correcting rules (gated-delta, SSD, delta) ≫ additive linear
+   attention (GLA, RetNet) — **not** how much of the state is used.
 
 Models: `state-spaces/mamba2-370m` (SSD), `linear-moe-hub/Gated-Deltanet-340M` (plain gated delta,
 loaded via a fused-MLP/`attn.D` weight adapter), `linear-moe-hub/MoM-Gated-Deltanet-340M` (MoM). All are
@@ -116,7 +121,43 @@ theoretical maximum. A `B/C`-aware probe or a recurrent-state SAE is needed to s
 
 ---
 
-## 5. Caveats & limitations (consolidated)
+## 5. eRank ⊥ recall across update rules (`notebooks/pretrained_decay_mqar.py`)
+In-context MQAR (recall + normalized state eRank vs load N) on **5 pretrained update rules**.
+[`gdn2-370m` (lit_gpt) deferred — its dscpkg chunk kernel calls fla `chunk_gla_fwd_o_gk(use_exp2=)`,
+absent in fla 0.5.1, so it crashes for `q_len>64`; the gated-delta point is covered by `gdn-plain-340m`.]
+
+| update rule (decay) | recall @ N=128 | normalized state eRank @ N=128 |
+|---|---|---|
+| gated-delta — `gdn-plain-340m` (decay) | **0.47 (best)** | 0.181 |
+| SSD — `mamba2-370m` (decay) | 0.42 | 0.098 |
+| delta — `deltanet-1.3B` (no-decay) | 0.38 | 0.149 |
+| gated-linear — `gla-1.3B` (decay) | 0.21 | 0.083 |
+| fixed-decay — `retnet-1.3B` | **0.08 (worst)** | 0.180 |
+
+![recall vs eRank across update rules](notebooks/decay_mqar_results/decay_mqar.png)
+
+- **eRank does not predict recall.** Gated-delta and RetNet have ~**identical** eRank (0.181 vs 0.180) yet
+  **opposite** recall (0.47 vs 0.08). Across the five, eRank (0.08–0.18) and recall (0.08–0.47) orderings
+  are scrambled (corr ≈ 0, slightly negative). This settles the recurring question: **eRank is not a
+  capacity / recall / saturation signal — do not use it as a chunking trigger.**
+- **decay ↛ eRank.** Decay models span both high (RetNet, gdn-plain ≈ 0.18) and low (mamba2 0.10, GLA 0.08)
+  eRank; the no-decay delta sits in the middle (0.15). The "decay lowers eRank" hypothesis is refuted (the
+  earlier near-rank-1 preview was a low-load, short-natural-text artifact — under MQAR load eRank grows).
+- **What actually distinguishes recall = the update-rule family, not state spread.** Delta /
+  error-correcting rules (gated-delta, SSD, delta) cluster high (0.38–0.47); pure **additive** linear
+  attention (GLA, RetNet) is low (0.08–0.21). Mechanism: additive updates `S ← decay·S + v kᵀ` superimpose
+  key–value outer products, so non-orthogonal keys **interfere** → interference-limited recall. The delta
+  rule `S ← S(I − β k kᵀ) + β v kᵀ` **erases the old value at `k` before writing** (online error-correction
+  / test-time regression), managing interference → more retrievable associations. RetNet is worst because
+  its **fixed, position-based** decay forgets by recency, not by content.
+
+Caveats: pretrained (not MQAR-trained) → in-context recall, modest absolute levels; sizes mixed (370M vs
+1.3B) but eRank is normalized and the *smaller* mamba2 beats the larger GLA/RetNet — the ordering is not a
+size artifact.
+
+---
+
+## 6. Caveats & limitations (consolidated)
 - **Length vs load are entangled**; the horizon "distance-robustness" is inflated by inert filler (§2).
 - **`stored` probe invalid** (chance) — realized (recall) capacity only; no stored≥used gap yet (§4).
 - **Pretrained, not MQAR-trained** — recall is in-context; trained models could differ.
@@ -124,12 +165,16 @@ theoretical maximum. A `B/C`-aware probe or a recurrent-state SAE is needed to s
   is spectral concentration by the dynamics (see `theory/random_matrix_full_rank.md`).
 - Coarse `N`/density grids; MoM compared at native (inflated) state size.
 
-## 6. Conclusions & next
-Established (diagnostics): capacity = recall; eRank is not capacity (anti-correlated under load);
-epiplexity is the density/chunk-length signal; per-memory compression of SSD ≈ plain gated-delta.
-**Not yet done here:** (a) update-rule comparison on the **long-context / horizon axis** with *real*
-content (the axis that actually differentiates forgetting mechanisms); (b) a valid stored-capacity probe;
-(c) the end-to-end **snapshot → route → reuse** system that would turn per-chunk capacity into extended
-effective capacity (H3) — pursued in the linear-memory-routing project.
+## 7. Conclusions & next
+Established (diagnostics): capacity = recall; **eRank is decisively not capacity** — anti-correlated with
+recall under load *within* a model (§2) and uncorrelated with recall *across* update rules (§5); epiplexity
+is the density/chunk-length signal; per-memory compression of SSD ≈ plain gated-delta. **What sets
+associative recall is the update rule's error-correcting (delta) update and content-based selection, not
+state spread (eRank)** — so eRank must not be used as a state-saturation / chunking trigger.
+**Not yet done here:** (a) `gdn2-370m` (lit_gpt) gated-delta point — needs an fla version matching its
+dscpkg chunk kernel; (b) a valid stored-capacity probe (`B/C`-aware or SAE); (c) update-rule comparison on
+a **real-content long-context / horizon axis**; (d) the end-to-end **snapshot → route → reuse** system
+that turns per-chunk capacity into extended effective capacity (H3) — pursued in the linear-memory-routing
+project.
 
 *Roadmap and hypotheses: `theory/research_goal.md`. Theory note: `theory/random_matrix_full_rank.md`.*
