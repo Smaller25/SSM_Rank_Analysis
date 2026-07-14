@@ -150,6 +150,8 @@ def load(kind, hf):
         GatedDeltaNet2.forward = patched
         for i, mm in enumerate([x for x in m.modules() if isinstance(x, GatedDeltaNet2)]):
             mm.layer_idx = i
+            mm.mode = "fused_recurrent"   # dscpkg chunk kernel calls fla chunk_gla w/ use_exp2 (not in
+            #   fla 0.5.1) -> crashes for q_len>64. fused_recurrent kernel is self-contained (eval-correct).
         return Bundle("gdn2", m, extra=(SHARED, cfg.n_layer))
     raise ValueError(kind)
 
@@ -193,6 +195,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default=None, help="run a single model (isolate CUDA context)")
     ap.add_argument("--aggregate", action="store_true", help="merge per-model json -> combined + plot")
+    ap.add_argument("--bs", type=int, default=16, help="eval batch size (lower for fragile kernels)")
+    ap.add_argument("--seeds", type=int, default=3)
     a = ap.parse_args()
 
     if a.aggregate:                                   # CPU-only: merge + plot + write combined
@@ -212,7 +216,7 @@ def main():
         try:
             t0 = time.time()
             b = load(kind, hf)
-            rows = eval_model(b, N_grid)
+            rows = eval_model(b, N_grid, seeds=a.seeds, bs=a.bs)
             res = {"decay": decay, "kind": kind, "rows": rows, "minutes": round((time.time() - t0) / 60, 2)}
             for r in rows:
                 print(f"  N={r['N']:>3} recall={r['recall']:.3f} eRank={r['state_erank']:.2f} "
