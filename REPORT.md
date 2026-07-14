@@ -155,6 +155,23 @@ Caveats: pretrained (not MQAR-trained) → in-context recall, modest absolute le
 1.3B) but eRank is normalized and the *smaller* mamba2 beats the larger GLA/RetNet — the ordering is not a
 size artifact.
 
+### What sets recall: interference management, not state spread
+Associative recall is a key→value binding problem, and update rules differ in how they handle
+**interference** between non-orthogonal keys:
+- **Additive linear attention** (GLA, RetNet, vanilla linear attn): `S ← decay·S + v kᵀ` — new pairs are
+  simply *superimposed*. Overlapping keys cross-talk in the read-out `v̂_j = S k_j`, so capacity is
+  **interference-limited** and there is no mechanism to correct. RetNet is worst because its decay is
+  **fixed / position-based** (forgets by recency, not content); GLA's gate is input-dependent, so a bit better.
+- **Delta / error-correcting rules** (DeltaNet, Gated DeltaNet; SSD/Mamba-2 is selective, delta-like):
+  `S ← S(I − β k kᵀ) + β v kᵀ` — the `−β k kᵀ` term **erases the value currently stored at `k` before
+  writing** the new one. This is an online least-squares / fast-weight update (Schlag et al. 2021; Yang
+  et al., *Gated Delta Networks*), which actively manages interference → more retrievable associations.
+
+So the recall ordering (gated-delta ≈ SSD ≈ delta ≫ GLA > RetNet) tracks **whether the rule
+error-corrects and selects by content**, not eRank. **Implication for the routing project:** extending
+capacity is about a *better interference-managing update / read-out*, **not** about forcing the state to
+span more directions (higher eRank) — RetNet has the highest eRank and the worst recall.
+
 ---
 
 ## 6. Caveats & limitations (consolidated)
