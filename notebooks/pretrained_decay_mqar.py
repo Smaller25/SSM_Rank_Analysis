@@ -36,8 +36,17 @@ FLA_CLASSES = {
     "fla-hub/gla-1.3B-100B":       ("fla.models.gla",       "GLAConfig",       "GLAForCausalLM"),
     "fla-hub/retnet-1.3B-100B":    ("fla.models.retnet",    "RetNetConfig",    "RetNetForCausalLM"),
 }
-GDN2_CKPT = ("/data2/sohyung/hf_home/hub/models--gyung--gdn2-370m-fineweb-edu-100b/"
-             "snapshots/2d859d6c96606314a2156d3decde84f7d2ad6510/checkpoint-6B-model-ckpt.pth")
+GDN2_HF, GDN2_CKPT_FILE = "gyung/gdn2-370m-fineweb-edu-100b", "checkpoint-6B-model-ckpt.pth"
+LIT_GPT_CANDS = ["/root/dscpkg", "/home/sohyung/long-gdn/dsc"]   # VESSL / local
+
+def _lit_gpt_path():
+    p = os.environ.get("LIT_GPT_PATH")
+    if p and os.path.isdir(os.path.join(p, "lit_gpt")):
+        return p
+    for c in LIT_GPT_CANDS:
+        if os.path.isdir(os.path.join(c, "lit_gpt")):
+            return c
+    raise RuntimeError("lit_gpt not found (set LIT_GPT_PATH)")
 
 
 class Bundle:
@@ -122,13 +131,14 @@ def load(kind, hf):
         m = Mdl.from_pretrained(hf, torch_dtype=torch.bfloat16).to(DEVICE).eval()
         return Bundle("fla", m)
     if kind == "gdn2":
-        sys.path.insert(0, "/home/sohyung/long-gdn/dsc")
+        sys.path.insert(0, _lit_gpt_path())
         from lit_gpt.config import Config
         from lit_gpt.model import GPT
         from lit_gpt.gdn2 import GatedDeltaNet2
+        from huggingface_hub import hf_hub_download
         cfg = Config.from_name("gdn2_370M")
         m = GPT(cfg).to(DEVICE).to(torch.bfloat16).eval()
-        ck = torch.load(GDN2_CKPT, map_location="cpu", weights_only=False)
+        ck = torch.load(hf_hub_download(GDN2_HF, GDN2_CKPT_FILE), map_location="cpu", weights_only=False)
         sd = ck["model"] if isinstance(ck, dict) and "model" in ck else ck
         m.load_state_dict(sd, strict=False)
         SHARED = {"cache": None}
@@ -179,28 +189,40 @@ def eval_model(bundle, N_grid, seeds=3, bs=16):
 
 
 def main():
+    import argparse, glob
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--only", default=None, help="run a single model (isolate CUDA context)")
+    ap.add_argument("--aggregate", action="store_true", help="merge per-model json -> combined + plot")
+    a = ap.parse_args()
+
+    if a.aggregate:                                   # CPU-only: merge + plot + write combined
+        results = {}
+        for f in sorted(glob.glob(os.path.join(RESULTS, "model_*.json"))):
+            results.update(json.load(open(f)))
+        with open(os.path.join(RESULTS, "decay_mqar.json"), "w") as fh:
+            json.dump(results, fh, indent=2)
+        plot(results)
+        print("aggregated", list(results), flush=True)
+        return
+
     N_grid = [4, 8, 16, 32, 48, 64, 96, 128]
-    results = {}
-    out = os.path.join(RESULTS, "decay_mqar.json")
-    for name, decay, kind, hf in MODELS:
+    todo = [m for m in MODELS if (a.only is None or m[0] == a.only)]
+    for name, decay, kind, hf in todo:
         print(f"\n=== {name} ({decay}, {kind}) ===", flush=True)
         try:
             t0 = time.time()
             b = load(kind, hf)
             rows = eval_model(b, N_grid)
-            results[name] = {"decay": decay, "kind": kind, "rows": rows,
-                             "minutes": round((time.time() - t0) / 60, 2)}
+            res = {"decay": decay, "kind": kind, "rows": rows, "minutes": round((time.time() - t0) / 60, 2)}
             for r in rows:
                 print(f"  N={r['N']:>3} recall={r['recall']:.3f} eRank={r['state_erank']:.2f} "
                       f"norm={r['erank_norm']}", flush=True)
-            del b; torch.cuda.empty_cache()
         except Exception as e:
-            import traceback; results[name] = {"decay": decay, "error": f"{type(e).__name__}: {str(e)[:200]}"}
-            print("  FAILED:", results[name]["error"], flush=True); traceback.print_exc()
-        with open(out, "w") as f:
-            json.dump(results, f, indent=2)
-    plot(results)
-    print("\nDONE ->", out, flush=True)
+            import traceback; res = {"decay": decay, "error": f"{type(e).__name__}: {str(e)[:200]}"}
+            print("  FAILED:", res["error"], flush=True); traceback.print_exc()
+        with open(os.path.join(RESULTS, f"model_{name}.json"), "w") as f:
+            json.dump({name: res}, f, indent=2)          # per-model file (isolation-friendly)
+    print("\nDONE", flush=True)
 
 
 def plot(results):
