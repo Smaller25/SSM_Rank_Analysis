@@ -1,0 +1,81 @@
+{
+  "mamba2-370m": {
+    "decay": "decay",
+    "kind": "mamba2",
+    "rows": [
+      {
+        "N": 4,
+        "recall": 0.890625,
+        "state_erank": 3.694406400564023,
+        "maxrank": 64,
+        "erank_norm": 0.05772510000881286
+      },
+      {
+        "N": 8,
+        "recall": 0.8359375,
+        "state_erank": 4.491729983387308,
+        "maxrank": 64,
+        "erank_norm": 0.07018328099042669
+      },
+      {
+        "N": 16,
+        "recall": 0.8203125,
+        "state_erank": 5.661768788937479,
+        "maxrank": 64,
+        "erank_norm": 0.08846513732714811
+      },
+      {
+        "N": 32,
+        "recall": 0.701171875,
+        "state_erank": 6.08981276764017,
+        "maxrank": 64,
+        "erank_norm": 0.09515332449437766
+      },
+      {
+        "N": 48,
+        "recall": 0.6462673743565878,
+        "state_erank": 6.286426746234712,
+        "maxrank": 64,
+        "erank_norm": 0.09822541790991737
+      },
+      {
+        "N": 64,
+        "recall": 0.5755208333333334,
+        "state_erank": 6.374918822819988,
+        "maxrank": 64,
+        "erank_norm": 0.09960810660656232
+      },
+      {
+        "N": 96,
+        "recall": 0.4728732705116272,
+        "state_erank": 6.50058771067092,
+        "maxrank": 64,
+        "erank_norm": 0.10157168297923312
+      },
+      {
+        "N": 128,
+        "recall": 0.4191080729166667,
+        "state_erank": 6.2765968422819345,
+        "maxrank": 64,
+        "erank_norm": 0.09807182566065523
+      }
+    ],
+    "minutes": 0.82
+  },
+  "gdn2-370m": {
+    "decay": "decay",
+    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
+  },
+  "deltanet-1.3B": {
+    "decay": "no-decay",
+    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
+  },
+  "gla-1.3B": {
+    "decay": "decay",
+    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
+  },
+  "retnet-1.3B": {
+    "decay": "decay",
+    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
+  }
+}
