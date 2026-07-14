@@ -1,81 +1,258 @@
 {
-  "mamba2-370m": {
-    "decay": "decay",
-    "kind": "mamba2",
+  "deltanet-1.3B": {
+    "decay": "no-decay",
+    "kind": "fla",
     "rows": [
       {
         "N": 4,
-        "recall": 0.890625,
-        "state_erank": 3.694406400564023,
-        "maxrank": 64,
-        "erank_norm": 0.05772510000881286
+        "recall": 0.8072916666666666,
+        "state_erank": 3.3354708443706236,
+        "maxrank": 128,
+        "erank_norm": 0.026058365971645497
       },
       {
         "N": 8,
-        "recall": 0.8359375,
-        "state_erank": 4.491729983387308,
-        "maxrank": 64,
-        "erank_norm": 0.07018328099042669
+        "recall": 0.828125,
+        "state_erank": 4.875324649011923,
+        "maxrank": 128,
+        "erank_norm": 0.03808847382040565
       },
       {
         "N": 16,
-        "recall": 0.8203125,
-        "state_erank": 5.661768788937479,
-        "maxrank": 64,
-        "erank_norm": 0.08846513732714811
+        "recall": 0.7122395833333334,
+        "state_erank": 7.220159194535679,
+        "maxrank": 128,
+        "erank_norm": 0.05640749370730999
       },
       {
         "N": 32,
-        "recall": 0.701171875,
-        "state_erank": 6.08981276764017,
-        "maxrank": 64,
-        "erank_norm": 0.09515332449437766
+        "recall": 0.6158854166666666,
+        "state_erank": 10.612368674948812,
+        "maxrank": 128,
+        "erank_norm": 0.08290913027303759
       },
       {
         "N": 48,
-        "recall": 0.6462673743565878,
-        "state_erank": 6.286426746234712,
-        "maxrank": 64,
-        "erank_norm": 0.09822541790991737
+        "recall": 0.5490451256434122,
+        "state_erank": 13.34835162717435,
+        "maxrank": 128,
+        "erank_norm": 0.10428399708729962
       },
       {
         "N": 64,
-        "recall": 0.5755208333333334,
-        "state_erank": 6.374918822819988,
-        "maxrank": 64,
-        "erank_norm": 0.09960810660656232
+        "recall": 0.4977213541666667,
+        "state_erank": 15.256599250146085,
+        "maxrank": 128,
+        "erank_norm": 0.11919218164176629
       },
       {
         "N": 96,
-        "recall": 0.4728732705116272,
-        "state_erank": 6.50058771067092,
-        "maxrank": 64,
-        "erank_norm": 0.10157168297923312
+        "recall": 0.4264322916666667,
+        "state_erank": 17.29121637613409,
+        "maxrank": 128,
+        "erank_norm": 0.1350876279385476
       },
       {
         "N": 128,
-        "recall": 0.4191080729166667,
-        "state_erank": 6.2765968422819345,
-        "maxrank": 64,
-        "erank_norm": 0.09807182566065523
+        "recall": 0.3753255208333333,
+        "state_erank": 19.131077916050952,
+        "maxrank": 128,
+        "erank_norm": 0.14946154621914806
       }
     ],
-    "minutes": 0.82
+    "minutes": 3.62
   },
   "gdn2-370m": {
     "decay": "decay",
     "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
   },
-  "deltanet-1.3B": {
-    "decay": "no-decay",
-    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
-  },
   "gla-1.3B": {
     "decay": "decay",
-    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
+    "kind": "fla",
+    "rows": [
+      {
+        "N": 4,
+        "recall": 0.22916666666666666,
+        "state_erank": 5.185920013321771,
+        "maxrank": 256,
+        "erank_norm": 0.020257500052038167
+      },
+      {
+        "N": 8,
+        "recall": 0.2786458333333333,
+        "state_erank": 9.11864838997523,
+        "maxrank": 256,
+        "erank_norm": 0.03561972027334074
+      },
+      {
+        "N": 16,
+        "recall": 0.3880208333333333,
+        "state_erank": 12.534797668457031,
+        "maxrank": 256,
+        "erank_norm": 0.04896405339241028
+      },
+      {
+        "N": 32,
+        "recall": 0.408203125,
+        "state_erank": 16.725583526823257,
+        "maxrank": 256,
+        "erank_norm": 0.06533431065165335
+      },
+      {
+        "N": 48,
+        "recall": 0.3151041567325592,
+        "state_erank": 19.905486394547754,
+        "maxrank": 256,
+        "erank_norm": 0.07775580622870217
+      },
+      {
+        "N": 64,
+        "recall": 0.3128255208333333,
+        "state_erank": 20.521556653910213,
+        "maxrank": 256,
+        "erank_norm": 0.08016233067933677
+      },
+      {
+        "N": 96,
+        "recall": 0.2545572866996129,
+        "state_erank": 20.746519113580387,
+        "maxrank": 256,
+        "erank_norm": 0.08104109028742339
+      },
+      {
+        "N": 128,
+        "recall": 0.20751953125,
+        "state_erank": 21.189308843678898,
+        "maxrank": 256,
+        "erank_norm": 0.0827707376706207
+      }
+    ],
+    "minutes": 6.2
+  },
+  "mamba2-370m": {
+    "decay": "decay",
+    "kind": "mamba2",
+    "source": "slurm-blackwell",
+    "rows": [
+      {
+        "N": 4,
+        "recall": 0.891,
+        "state_erank": 3.69,
+        "maxrank": 64,
+        "erank_norm": 0.05765625
+      },
+      {
+        "N": 8,
+        "recall": 0.836,
+        "state_erank": 4.49,
+        "maxrank": 64,
+        "erank_norm": 0.07015625
+      },
+      {
+        "N": 16,
+        "recall": 0.82,
+        "state_erank": 5.66,
+        "maxrank": 64,
+        "erank_norm": 0.0884375
+      },
+      {
+        "N": 32,
+        "recall": 0.701,
+        "state_erank": 6.09,
+        "maxrank": 64,
+        "erank_norm": 0.09515625
+      },
+      {
+        "N": 48,
+        "recall": 0.646,
+        "state_erank": 6.29,
+        "maxrank": 64,
+        "erank_norm": 0.09828125
+      },
+      {
+        "N": 64,
+        "recall": 0.576,
+        "state_erank": 6.37,
+        "maxrank": 64,
+        "erank_norm": 0.09953125
+      },
+      {
+        "N": 96,
+        "recall": 0.473,
+        "state_erank": 6.5,
+        "maxrank": 64,
+        "erank_norm": 0.1015625
+      },
+      {
+        "N": 128,
+        "recall": 0.419,
+        "state_erank": 6.28,
+        "maxrank": 64,
+        "erank_norm": 0.098125
+      }
+    ]
   },
   "retnet-1.3B": {
     "decay": "decay",
-    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
+    "kind": "fla",
+    "rows": [
+      {
+        "N": 4,
+        "recall": 0.5729166666666666,
+        "state_erank": 6.168400390694539,
+        "maxrank": 256,
+        "erank_norm": 0.024095314026150543
+      },
+      {
+        "N": 8,
+        "recall": 0.4947916666666667,
+        "state_erank": 10.316103760980898,
+        "maxrank": 256,
+        "erank_norm": 0.04029728031633163
+      },
+      {
+        "N": 16,
+        "recall": 0.3763020833333333,
+        "state_erank": 18.155795743068058,
+        "maxrank": 256,
+        "erank_norm": 0.0709210771213596
+      },
+      {
+        "N": 32,
+        "recall": 0.24153645833333334,
+        "state_erank": 28.717815675876206,
+        "maxrank": 256,
+        "erank_norm": 0.11217896748389143
+      },
+      {
+        "N": 48,
+        "recall": 0.1653645783662796,
+        "state_erank": 34.75051233855387,
+        "maxrank": 256,
+        "erank_norm": 0.13574418882247605
+      },
+      {
+        "N": 64,
+        "recall": 0.138671875,
+        "state_erank": 40.47838046153387,
+        "maxrank": 256,
+        "erank_norm": 0.15811867367786667
+      },
+      {
+        "N": 96,
+        "recall": 0.08680555472771327,
+        "state_erank": 44.78413824323151,
+        "maxrank": 256,
+        "erank_norm": 0.17493804001262309
+      },
+      {
+        "N": 128,
+        "recall": 0.07666015625,
+        "state_erank": 46.112892250633905,
+        "maxrank": 256,
+        "erank_norm": 0.1801284853540387
+      }
+    ],
+    "minutes": 11.09
   }
 }

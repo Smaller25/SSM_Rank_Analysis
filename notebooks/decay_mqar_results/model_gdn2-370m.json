@@ -1,0 +1,6 @@
+{
+  "gdn2-370m": {
+    "decay": "decay",
+    "error": "AcceleratorError: CUDA error: an illegal memory access was encountered\nSearch for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel e"
+  }
+}
