@@ -9,7 +9,7 @@ then measures, per update rule, recall(N) and state eRank(N) as load N grows. An
 Robust: each mixer in try/except; results written incrementally to state-saturation_results/.
 Run on GPU (fla Triton kernels). Usage: python mqar_fromscratch.py [--smoke]
 """
-import os, sys, json, math, argparse, time
+import os, sys, json, math, argparse, time, contextlib
 import numpy as np, torch, torch.nn as nn, torch.nn.functional as F
 
 import fla.layers as FLA
