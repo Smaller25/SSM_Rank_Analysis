@@ -30,7 +30,9 @@ def run_dataset(name, bundle, tok, stride, niah_len, layer_stride, plot, out_dir
     sigs = analysis.build_signals(grid, feats, dla, nll)
 
     rec = {"meta": meta, "T": int(T), "stride": stride, "tolerance_w": w,
-           "gt": gt, "grid": grid, "methods": {}}
+           "gt": gt, "grid": grid, "methods": {},
+           "signals": {n: {"kind": k, "values": [None if (x != x) else float(x) for x in v]}
+                       for n, (v, k) in sigs.items()}}
 
     if gt is None:  # D1: 포화 캘리브레이션만
         er = feats["erank"]; sat = float(er[-1])
