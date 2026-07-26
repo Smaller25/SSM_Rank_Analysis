@@ -29,6 +29,12 @@ reproduction, and confirm nothing must be re-implemented that already exists.
   `GDN2_CKPT_PATH` to the 10B checkpoint so the canonical loader resolves it. **Pass `--ckpt` (or
   env `GDN2_CKPT_PATH`) to the exact checkpoint-10B path on VESSL.**
 
+> **CORRECTION (2026-07-26) [PIN-1].** The 10B checkpoint is **superseded**. State rank is sensitive
+> to training amount, so the reproduction uses the **100B paper-matched** `model-100b.pth`
+> (`/home/sohyung/models/gdn2_1.3B_100b.pth`, 17.4 GB). The loader now **rejects any 10B checkpoint**
+> and **accepts 95B** as a paper-matched near-equivalent. Run on greenbeard SLURM (not VESSL). This
+> §checkpoint-note above is retained as the original Stage-0 record.
+
 ## G0 verdict
 PASS — all Stage-1 primitives (loader, 2 of 3 rank metrics, prefix-sweep, data pattern) exist and are
 reused; only the threshold-rank (Eq.6), time-consistency stats, 3-domain+attack data, cross-domain

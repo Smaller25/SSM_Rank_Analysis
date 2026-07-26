@@ -71,6 +71,19 @@ def stable_rank(M):
     return float(_cap_stable_rank(_to_numpy(M)))
 
 
+def nuclear_norm(M):
+    """Nuclear norm ||M||_* = sum_i sigma_i (svdvals().sum()).
+
+    Credibility-fix (3): the paper's norm-consistency axis (Thm 4.4, Eq.13) is about the *magnitude*
+    of the per-head state, not its rank. We report a per-head nuclear-norm vector so that
+    time-consistency can compute a *norm-cosine* on norms (magnitude order-preservation) SEPARATELY
+    from the Spearman on the rank vector. A zero (idle-head) matrix -> 0.0.
+    """
+    a = _to_numpy(M)
+    s = np.linalg.svd(a, compute_uv=False)
+    return float(s.sum()) if s.size else 0.0
+
+
 def all_ranks(M, eps=EPS_THRESHOLD_RANK):
     """All 3 metrics + cap in one SVD-friendly call. Returns a dict with metric names + cap.
 
@@ -82,6 +95,7 @@ def all_ranks(M, eps=EPS_THRESHOLD_RANK):
         "threshold_rank": threshold_rank(M, eps=eps),   # Eq.(6), eps=1e-4
         "entropy_erank": entropy_erank(M),              # capacity_utils.effective_rank
         "stable_rank": stable_rank(M),                  # capacity_utils.stable_rank
+        "nuclear_norm": nuclear_norm(M),                # ||M||_* = sum sigma_i (norm axis, fix-3)
         "cap_d": matrix_cap(M),                         # min(dk,dv)
         "eps": float(eps),
     }
@@ -97,6 +111,9 @@ def _selftest():
     r = all_ranks(M)
     assert abs(r["threshold_rank"] - 3.0) < 1e-9, r
     assert r["cap_d"] == 128
+    # nuclear norm = sum of singular values; rank-3 matrix has 3 nonzero, matches svdvals().sum()
+    assert abs(r["nuclear_norm"] - float(np.linalg.svd(M, compute_uv=False).sum())) < 1e-6, r
+    assert all_ranks(np.zeros((16, 16)))["nuclear_norm"] == 0.0
     # full-rank random: threshold_rank ~ cap, entropy_erank < cap (spectrum spread).
     F = rng.standard_normal((64, 64))
     rf = all_ranks(F)

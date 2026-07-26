@@ -25,6 +25,11 @@ N_SEQ_DEFAULT = 16              # >=16 per domain [PIN-5]
 DOMAINS = ["wikitext", "github", "arxiv"]
 ATTACKS = ["repeat_rarechar", "repeat_number"]
 
+# NOTE on determinism [PIN-6]: every data path here is order-deterministic already — HF streaming
+# yields the FIRST-N examples (no shuffle), the fallback corpus is seeded by a fixed per-domain
+# rng, and the attacks use fixed strings / a fixed rng seed. Global torch/np/PYTHONHASHSEED pinning
+# is done by stage1_repro.set_seed() before any data is drawn, so the whole pipeline is reproducible.
+
 
 # ----------------------------------------------------------------------------- helpers
 def _tok_chunks(tok, texts, seq_len, n_seq):
@@ -76,7 +81,8 @@ def make_wikitext(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
     if texts is None:
         texts, source = _fallback_texts("wikitext", seq_len, n_seq, tok), "fallback"
     ids = _tok_chunks(tok, texts, seq_len, n_seq)
-    return ids, {"domain": "wikitext", "source": source, "seq_len": seq_len, "n_seq": len(ids)}
+    return ids, {"domain": "wikitext", "source": source, "is_fallback": source == "fallback",
+                 "seq_len": seq_len, "n_seq": len(ids)}
 
 
 def _stream_field(spec, field, n, **load_kw):
@@ -119,7 +125,8 @@ def make_github(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
     if texts is None:
         texts = _fallback_texts("github", seq_len, n_seq, tok)
     ids = _tok_chunks(tok, texts, seq_len, n_seq)
-    return ids, {"domain": "github", "source": source, "seq_len": seq_len, "n_seq": len(ids)}
+    return ids, {"domain": "github", "source": source, "is_fallback": source == "fallback",
+                 "seq_len": seq_len, "n_seq": len(ids)}
 
 
 def make_arxiv(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
@@ -138,7 +145,8 @@ def make_arxiv(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
     if texts is None:
         texts = _fallback_texts("arxiv", seq_len, n_seq, tok)
     ids = _tok_chunks(tok, texts, seq_len, n_seq)
-    return ids, {"domain": "arxiv", "source": source, "seq_len": seq_len, "n_seq": len(ids)}
+    return ids, {"domain": "arxiv", "source": source, "is_fallback": source == "fallback",
+                 "seq_len": seq_len, "n_seq": len(ids)}
 
 
 # ----------------------------------------------------------------------------- App.D repeat attacks
@@ -157,8 +165,9 @@ def make_repeat_rarechar(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
             enc = (enc * int(np.ceil(seq_len / max(1, len(enc)))))
         arr = np.asarray(enc[:seq_len], dtype=np.int64)
         ids.append(torch.from_numpy(arr).unsqueeze(0))
-    return ids, {"domain": "repeat_rarechar", "source": "appD_reconstruct", "seq_len": seq_len,
-                 "n_seq": len(ids), "note": "App.D repeat attack: rare-char repetition"}
+    return ids, {"domain": "repeat_rarechar", "source": "appD_reconstruct", "is_fallback": False,
+                 "seq_len": seq_len, "n_seq": len(ids),
+                 "note": "App.D repeat attack: rare-char repetition"}
 
 
 def make_repeat_number(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
@@ -173,8 +182,9 @@ def make_repeat_number(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
             enc = (enc * int(np.ceil(seq_len / max(1, len(enc)))))
         arr = np.asarray(enc[:seq_len], dtype=np.int64)
         ids.append(torch.from_numpy(arr).unsqueeze(0))
-    return ids, {"domain": "repeat_number", "source": "appD_reconstruct", "seq_len": seq_len,
-                 "n_seq": len(ids), "note": "App.D repeat attack: common-number repetition"}
+    return ids, {"domain": "repeat_number", "source": "appD_reconstruct", "is_fallback": False,
+                 "seq_len": seq_len, "n_seq": len(ids),
+                 "note": "App.D repeat attack: common-number repetition"}
 
 
 ALL = {
