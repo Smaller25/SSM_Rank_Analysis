@@ -83,9 +83,31 @@ def draw_random_heads(all_heads, k, seed):
     return [all_heads[i] for i in sorted(idx.tolist())]
 
 
+def reset_shared_cache(bundle):
+    """[fix blocker-1/2] CRITICAL: clear the recurrent-state cache left behind by any prior
+    bundle.states() call BEFORE any logits-based eval.
+
+    common.Bundle.states() sets shared["cache"] = Cache() and NEVER resets it (260722_exp/common.py:69).
+    The patched GatedDeltaNet2.forward (common.py:107-111) then feeds that populated Cache as the
+    initial recurrent_state to fused_recurrent_gdn2 for EVERY subsequent forward, with use_cache
+    forced True -> NIAH/PPL logits would start from (and keep mutating) a stale state left over from
+    the last classification sequence. head_classifier.classify() calls bundle.states() before the
+    condition loop, so without this reset every condition's NIAH + PPL is contaminated identically,
+    invalidating the whole asymmetry DV. Resetting to None makes the patched forward take the clean
+    branch (past_key_values=None, use_cache=False -> stateless forward), so it never repopulates the
+    shared cache and every logits() call is deterministic regardless of whether states() ran (also
+    kills the fresh-vs-resume divergence, blocker-2). We only edit within the Stage 2 worktree, so we
+    reach through to the canonical common.Bundle via bundle.base.shared (Stage1Bundle wraps it)."""
+    base = getattr(bundle, "base", bundle)
+    shared = getattr(base, "shared", None)
+    if isinstance(shared, dict) and shared.get("cache") is not None:
+        shared["cache"] = None
+
+
 def evaluate_condition(bundle, tok, masker, mask_set, domain_ids, args):
     """Set the mask, run NIAH retrieval + per-domain PPL, return the metrics dict. Mask is reset by
     the caller between conditions."""
+    reset_shared_cache(bundle)   # [fix blocker-1/2] purge stale recurrent state from classification
     masker.set_mask(mask_set)
     niah = niah_retrieval.run_niah(
         bundle, tok, n_samples=args.niah_samples, max_seq_length=args.seq_len,

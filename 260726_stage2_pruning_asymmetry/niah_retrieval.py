@@ -36,13 +36,28 @@ for _p in (_HERE, _260722):
 import niah_ruler   # noqa: E402  (RULER niah_multikey_1, verbatim)
 
 
+def _reset_shared_cache(bundle):
+    """Clear the leftover recurrent-state cache on the canonical common.Bundle (bundle.base.shared),
+    so the patched GatedDeltaNet2.forward runs stateless. See stage2_pruning.reset_shared_cache."""
+    base = getattr(bundle, "base", bundle)
+    shared = getattr(base, "shared", None)
+    if isinstance(shared, dict) and shared.get("cache") is not None:
+        shared["cache"] = None
+
+
 @torch.no_grad()
 def greedy_generate(bundle, tok, input_text, max_new_tokens=128, stop_newline_run=3):
     """Greedy (argmax) decode after `input_text`. Returns the decoded continuation string.
 
     Uses the full-forward bundle.logits each step (no KV cache needed for correctness on gdn2; the
     recurrent forward re-runs the prefix). Stops early on EOS or a run of blank lines (the model has
-    clearly stopped answering) to save autoregressive steps."""
+    clearly stopped answering) to save autoregressive steps.
+
+    [fix blocker-1/2] Defensively clear any stale recurrent-state cache left by a prior
+    bundle.states() (common.Bundle.states sets shared["cache"]=Cache() and never resets it). With the
+    cache None the patched GatedDeltaNet2.forward takes the clean stateless branch, so each full
+    re-forward over the growing prefix is correct and independent of whether classification ran."""
+    _reset_shared_cache(bundle)
     dev = getattr(bundle, "base", bundle).model.lm_head.weight.device \
         if hasattr(getattr(bundle, "base", bundle).model, "lm_head") else "cuda"
     ids = tok(input_text, add_special_tokens=False).input_ids
