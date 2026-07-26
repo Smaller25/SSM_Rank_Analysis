@@ -28,7 +28,7 @@ Constants mirror the plan §6 + consistencyNotes PINs and are echoed into `stage
 | Gate | Metric | Threshold |
 |---|---|---|
 | **G1a** | stratification bimodality (Sarle BC on normalized threshold-rank) | BC > 0.555 in ≥50% of natural domains |
-| **G1a** | temporal order-preservation Spearman ρ on the **rank** vector, **growth regime `t<d`** (fix-1) | ρ > **0.90** in ≥50% of layers (mean over natural domains) |
+| **G1a** | temporal order-preservation Spearman ρ on the **rank** vector, **PRIMARY = separated pairs** (early anchor t≈d vs late t=256/512/1024/2048, per paper §3.2 t=128-vs-t=2048); growth-adjacent ρ is a SECONDARY diagnostic only (fix-1, corrected) | ρ > **0.90** in ≥50% of layers (mean over natural domains) |
 | (aux) | **norm-cosine on the per-head nuclear-norm vector** (fix-3) / cos sim on rank | > **0.98** / > **0.97** (paper App., Thm 4.4/Eq.13) |
 | **G1b** | r̄ → rank regression R² (threshold-rank) + paper bound `min(t,d)` residual (fix-2) | pass ≥ **0.7**, weak ≥ **0.3**, else fail |
 | **G1c** | eRank vs threshold-rank head-ranking Spearman | strong ≥ **0.8**, pass ≥ **0.6**, else fail |

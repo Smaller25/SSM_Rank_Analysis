@@ -25,15 +25,20 @@ N_SEQ_DEFAULT = 16              # >=16 per domain [PIN-5]
 DOMAINS = ["wikitext", "github", "arxiv"]
 ATTACKS = ["repeat_rarechar", "repeat_number"]
 
-# NOTE on determinism [PIN-6]: every data path here is order-deterministic already — HF streaming
-# yields the FIRST-N examples (no shuffle), the fallback corpus is seeded by a fixed per-domain
-# rng, and the attacks use fixed strings / a fixed rng seed. Global torch/np/PYTHONHASHSEED pinning
-# is done by stage1_repro.set_seed() before any data is drawn, so the whole pipeline is reproducible.
+# [PIN-6] seed-DEPENDENT sampling (fix: seeds must change the actual sample, else multi-seed variance
+# is 0). set_data_seed(seed) is called by stage1_repro before any domain is built; _tok_chunks then
+# seed-shuffles the candidate texts so different seeds draw DIFFERENT sequences (not just reorder the
+# same first-N tokens). Within one seed the whole pipeline stays deterministic (fixed shuffle).
+_SEED = {"v": 0}
+def set_data_seed(seed):
+    _SEED["v"] = int(seed)
 
 
 # ----------------------------------------------------------------------------- helpers
 def _tok_chunks(tok, texts, seq_len, n_seq):
-    """Concatenate texts, tokenize, and cut into n_seq non-overlapping chunks of length seq_len."""
+    """Seed-shuffle texts, concatenate, tokenize, cut into n_seq non-overlapping chunks of seq_len."""
+    texts = list(texts)
+    np.random.default_rng(_SEED["v"]).shuffle(texts)   # [PIN-6] seed-dependent sample
     ids_all = []
     for t in texts:
         if not t:

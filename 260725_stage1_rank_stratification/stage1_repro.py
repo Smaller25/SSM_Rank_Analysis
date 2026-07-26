@@ -284,66 +284,96 @@ def analyze_domain(bundle, ids_list, seq_len, stride, layer_stride, meta):
     #   axis (ii) NUCLEAR-NORM   -> norm-cosine( nuc_ta, nuc_tb )           (magnitude order-pres.)
     n_tc = min(4, len(ids_list))
     d_cap = int(np.median(cap)) if cap.size else 128
-    tc_layers = {}   # li -> {"rho_growth":[], "normcos_growth":[], "cos_growth":[], "n_growth":0, "n_sat":0}
+    tc_layers = {}    # li -> adjacent-growth (SECONDARY, diagnostic) accumulators
+    sep_layers = {}   # li -> separated-pair (PRIMARY, paper §3.2) accumulators
     for si in range(n_tc):
         per_t = _rank_trajectory(bundle, ids_list[si], seq_len, stride, layer_stride, d_cap)
         for li, vecs in per_t.items():        # vecs: {t: {"rank":(H,), "nuc":(H,)}}
             ts = sorted(vecs.keys())
             if len(ts) < 2:
                 continue
+            # PRIMARY [fix-1, paper §3.2]: separated pairs = early anchor (largest t<=d, rank just
+            # established) vs each late point (t>d in {256,512,1024,seq_len}). This IS the paper's
+            # t=128-vs-t=2048 order-preservation; it spans growth->saturation and is NOT trivially high.
+            growth_ts = [t for t in ts if t <= d_cap]
+            anchor = growth_ts[-1] if growth_ts else ts[0]
+            late_ts = [t for t in ts if t > d_cap]
+            sl = sep_layers.setdefault(li, {"rho": [], "normcos": [], "cos": [], "n": 0, "anchor": anchor})
+            for tb in late_ts:
+                ra, rb = vecs[anchor]["rank"], vecs[tb]["rank"]
+                na, nb = vecs[anchor]["nuc"], vecs[tb]["nuc"]
+                rho = _spearman(ra, rb)
+                if not np.isfinite(rho):
+                    continue
+                sl["rho"].append(rho); sl["normcos"].append(_norm_cosine(na, nb))
+                sl["cos"].append(_cos_sim(ra, rb)); sl["n"] += 1
+            # SECONDARY: adjacent growth pairs (diagnostic; degenerate/saturated pairs counted).
             slot = tc_layers.setdefault(li, {"rho_growth": [], "normcos_growth": [], "cos_growth": [],
                                              "n_growth": 0, "n_sat": 0})
             for ta, tb in zip(ts[:-1], ts[1:]):
                 rk_a, rk_b = vecs[ta]["rank"], vecs[tb]["rank"]
-                nc_a, nc_b = vecs[ta]["nuc"], vecs[tb]["nuc"]
-                rho = _spearman(rk_a, rk_b)   # NaN => degenerate/saturated rank vector
+                rho = _spearman(rk_a, rk_b)
                 if not np.isfinite(rho):
                     slot["n_sat"] += 1
                     continue
                 slot["n_growth"] += 1
                 slot["rho_growth"].append(rho)
-                slot["normcos_growth"].append(_norm_cosine(nc_a, nc_b))   # fix-3: NUCLEAR-NORM cosine
+                slot["normcos_growth"].append(_norm_cosine(vecs[ta]["nuc"], vecs[tb]["nuc"]))
                 slot["cos_growth"].append(_cos_sim(rk_a, rk_b))
     tc_summary = {}
-    rhos_all, normcos_all = [], []
-    tot_growth = tot_sat = 0
-    for li, s in tc_layers.items():
-        tot_growth += s["n_growth"]; tot_sat += s["n_sat"]
-        if not s["rho_growth"]:
-            tc_summary[str(li)] = {"spearman_rho_growth": float("nan"),
-                                   "norm_cosine_growth": float("nan"), "cos_sim_growth": float("nan"),
-                                   "n_growth_pairs": s["n_growth"], "n_saturated_pairs": s["n_sat"]}
-            continue
-        rho_m = float(np.nanmedian(s["rho_growth"]))
-        ncos_m = float(np.nanmedian(s["normcos_growth"]))
-        rhos_all.append(rho_m); normcos_all.append(ncos_m)
+    rho_sep_all, normcos_sep_all = [], []    # PRIMARY separated
+    rhos_all, normcos_all = [], []           # SECONDARY growth
+    tot_growth = tot_sat = tot_sep = 0
+    for li in sorted(set(list(sep_layers.keys()) + list(tc_layers.keys()))):
+        sp = sep_layers.get(li, {"rho": [], "normcos": [], "cos": [], "n": 0, "anchor": None})
+        gr = tc_layers.get(li, {"rho_growth": [], "normcos_growth": [], "cos_growth": [], "n_growth": 0, "n_sat": 0})
+        tot_sep += sp["n"]; tot_growth += gr["n_growth"]; tot_sat += gr["n_sat"]
+        rho_sep_m = float(np.nanmedian(sp["rho"])) if sp["rho"] else float("nan")
+        ncos_sep_m = float(np.nanmedian(sp["normcos"])) if sp["normcos"] else float("nan")
+        if np.isfinite(rho_sep_m):
+            rho_sep_all.append(rho_sep_m); normcos_sep_all.append(ncos_sep_m)
+        rho_g_m = float(np.nanmedian(gr["rho_growth"])) if gr["rho_growth"] else float("nan")
+        ncos_g_m = float(np.nanmedian(gr["normcos_growth"])) if gr["normcos_growth"] else float("nan")
+        if np.isfinite(rho_g_m):
+            rhos_all.append(rho_g_m); normcos_all.append(ncos_g_m)
         tc_summary[str(li)] = {
-            "spearman_rho_growth": rho_m,
-            "spearman_rho_growth_min": float(np.nanmin(s["rho_growth"])),
-            "norm_cosine_growth": ncos_m,
-            "cos_sim_growth": float(np.nanmedian(s["cos_growth"])),
-            "n_growth_pairs": s["n_growth"], "n_saturated_pairs": s["n_sat"],
+            # PRIMARY separated (paper): anchor(t<=d) vs late saturated points
+            "spearman_rho_separated": rho_sep_m,
+            "spearman_rho_separated_min": float(np.nanmin(sp["rho"])) if sp["rho"] else float("nan"),
+            "norm_cosine_separated": ncos_sep_m,
+            "anchor_t": sp["anchor"], "n_separated_pairs": sp["n"],
+            # SECONDARY growth-adjacent (diagnostic)
+            "spearman_rho_growth": rho_g_m, "norm_cosine_growth": ncos_g_m,
+            "cos_sim_growth": float(np.nanmedian(gr["cos_growth"])) if gr["cos_growth"] else float("nan"),
+            "n_growth_pairs": gr["n_growth"], "n_saturated_pairs": gr["n_sat"],
         }
     time_consistency = {
-        "regime": "growth (prefix pairs with t < d = min(dk,dv)); saturated pairs counted separately",
+        "regime": "PRIMARY=separated pairs anchor(t<=d) vs late(256/512/1024/seq_len) per paper §3.2; "
+                  "SECONDARY=adjacent growth pairs (diagnostic)",
         "d_cap": d_cap,
         "per_layer": tc_summary,
         "n_layers": len(tc_summary),
+        # PRIMARY (paper axis) — the verdict gates on this
+        "n_layers_with_separated": len(rho_sep_all),
+        "frac_layers_rho_sep_gt_0.90": float(np.mean([r > PREREG["spearman_time_consistency_min"]
+                                                      for r in rho_sep_all])) if rho_sep_all else float("nan"),
+        "median_rho_separated": float(np.nanmedian(rho_sep_all)) if rho_sep_all else float("nan"),
+        "min_rho_separated": float(np.nanmin(rho_sep_all)) if rho_sep_all else float("nan"),
+        "median_norm_cosine_separated": float(np.nanmedian(normcos_sep_all)) if normcos_sep_all else float("nan"),
+        "frac_layers_norm_cos_sep_gt_0.98": float(np.mean([n > PREREG["norm_consistency_min"]
+                                                           for n in normcos_sep_all])) if normcos_sep_all else float("nan"),
+        "n_separated_pairs_total": int(tot_sep),
+        # SECONDARY (growth diagnostic) — reported, NOT gated
         "n_layers_with_growth": len(rhos_all),
-        # RANK axis: Spearman rho on the per-head threshold-rank vector
         "frac_layers_rho_gt_0.90": float(np.mean([r > PREREG["spearman_time_consistency_min"]
                                                   for r in rhos_all])) if rhos_all else float("nan"),
         "median_rho_growth": float(np.nanmedian(rhos_all)) if rhos_all else float("nan"),
-        "min_rho_growth": float(np.nanmin(rhos_all)) if rhos_all else float("nan"),
-        # NORM axis: norm-cosine on the per-head NUCLEAR-NORM vector (fix-3, separate from rank)
         "median_norm_cosine_growth": float(np.nanmedian(normcos_all)) if normcos_all else float("nan"),
-        "frac_layers_norm_cos_gt_0.98": float(np.mean([n > PREREG["norm_consistency_min"]
-                                                       for n in normcos_all])) if normcos_all else float("nan"),
-        # saturation bookkeeping (both regimes reported, per fix-1)
         "n_growth_pairs_total": int(tot_growth), "n_saturated_pairs_total": int(tot_sat),
         "saturation_fraction": (float(tot_sat / (tot_growth + tot_sat)) if (tot_growth + tot_sat) else float("nan")),
-        "note": ("rho on threshold-rank vector (RANK axis) + norm-cosine on nuclear-norm vector "
-                 "(NORM axis, Thm 4.4/Eq.13); measured on GROWTH prefix pairs (t<d), saturated pairs counted."),
+        "note": ("PRIMARY: Spearman rho(rank_anchor, rank_late) on separated pairs (paper t=128 vs "
+                 "t=2048, order-preservation across growth->saturation) + nuclear-norm cosine (Thm4.4). "
+                 "SECONDARY: adjacent growth-pair rho (diagnostic; degenerate/saturated pairs counted)."),
     }
 
     return {
@@ -373,8 +403,12 @@ def _growth_grid(T, stride, d_cap):
     grid = list(range(step, top + 1, step))
     if not grid or grid[-1] != top:
         grid.append(top)
-    if T > top:                       # one saturated reference snapshot (drives n_sat counting)
-        grid.append(T)
+    # fix-1 (paper §3.2): the paper compares an early anchor (t≈d) with WIDELY-SEPARATED late points
+    # (t=256/512/1024/2048) spanning growth->saturation. Add those late snapshots so the driver can
+    # form the paper's separated pairs (PRIMARY time-consistency), not just adjacent growth pairs.
+    for late in (256, 512, 1024, T):
+        if d_cap < late <= T:
+            grid.append(late)
     return sorted(set(grid))
 
 
@@ -467,18 +501,22 @@ def verdict(report):
     doms = report["domains"]
     natural = [d for d in doms if d in ("wikitext", "github", "arxiv")]
     fb = _fallback_natural_domains(report, natural)
-    # G1a: bimodal stratification + time consistency (RANK axis Spearman in growth regime)
+    # G1a: bimodal stratification + time consistency. PRIMARY axis [fix-1] = SEPARATED pairs
+    # (paper §3.2: early anchor t≈d vs late t=256/512/1024/2048 order-preservation). The growth-adjacent
+    # rho is a SECONDARY diagnostic and is reported but NOT gated.
     bimodal = np.mean([report["per_domain"][d]["stratification"]["is_bimodal_BC"] for d in natural])
-    rho_frac = np.nanmean([report["per_domain"][d]["time_consistency"]["frac_layers_rho_gt_0.90"]
-                           for d in natural])
+    rho_frac = np.nanmean([report["per_domain"][d]["time_consistency"]
+                           .get("frac_layers_rho_sep_gt_0.90", float("nan")) for d in natural])   # PRIMARY
+    rho_frac_growth = np.nanmean([report["per_domain"][d]["time_consistency"]
+                                  .get("frac_layers_rho_gt_0.90", float("nan")) for d in natural])  # secondary
     normcos_frac = np.nanmean([report["per_domain"][d]["time_consistency"]
-                               .get("frac_layers_norm_cos_gt_0.98", float("nan")) for d in natural])
+                               .get("frac_layers_norm_cos_sep_gt_0.98", float("nan")) for d in natural])
     sat_frac = np.nanmean([report["per_domain"][d]["time_consistency"]
                            .get("saturation_fraction", float("nan")) for d in natural])
     if fb:
         g1a = None   # INVALID — fallback synthetic data cannot ground a reproduction verdict
     else:
-        g1a = bool(bimodal >= 0.5 and rho_frac >= 0.5)
+        g1a = bool(bimodal >= 0.5 and np.isfinite(rho_frac) and rho_frac >= 0.5)
     # G1b: r_bar regression R^2
     r2s = []
     for d in natural:
@@ -510,8 +548,9 @@ def verdict(report):
         "G1a_fallback_natural_domains": fb,
         "G1a_detail": {
             "frac_domains_bimodal": float(bimodal),
-            "mean_frac_layers_rho>0.90 (growth,rank)": float(rho_frac),
-            "mean_frac_layers_norm_cos>0.98 (growth,nuclear-norm)": float(normcos_frac),
+            "mean_frac_layers_rho_sep>0.90 (PRIMARY: separated pairs, rank)": float(rho_frac),
+            "mean_frac_layers_rho>0.90 (SECONDARY: growth-adjacent, rank)": float(rho_frac_growth),
+            "mean_frac_layers_norm_cos_sep>0.98 (separated, nuclear-norm)": float(normcos_frac),
             "mean_saturation_fraction": float(sat_frac),
         },
         "G1b_rbar_regression": g1b, "G1b_R2_median": r2_med,
@@ -524,6 +563,7 @@ def verdict(report):
 # ================================================================== main
 def run(bundle, tok, args):
     import data_stage1
+    data_stage1.set_data_seed(args.seed)   # [PIN-6] seed-dependent sampling (real multi-seed variance)
     which = args.domains.split(",") if args.domains else list(data_stage1.ALL.keys())
     data = data_stage1.load_all(tok, seq_len=args.seq_len, n_seq=args.n_seq, which=which)
 

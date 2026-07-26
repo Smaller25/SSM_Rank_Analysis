@@ -15,11 +15,28 @@ export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
 echo "node $(hostname) gpu $CUDA_VISIBLE_DEVICES"
 python -c "import torch;print('torch',torch.__version__,'cuda',torch.cuda.is_available(),torch.cuda.device_count())"
 
-HERE=/home/sohyung/SSM_Rank_Analysis/260725_stage1_rank_stratification
-OUT=$HERE/results/stage1_100b
-mkdir -p "$OUT"
-# --stride 16 -> dense t<d=128 growth grid for [B]; --require-real-data hard-fails on synthetic fallback.
-python "$HERE/stage1_repro.py" \
-    --n-seq 16 --seq-len 2048 --layer-stride 1 --stride 16 --seed 0 \
-    --require-real-data --resume --out "$OUT"
+# [BLOCKER-FIX] Point HERE at the WORKTREE that holds the 4 credibility fixes
+# (growth-regime rho, paper min(t,d) bound, nuclear-norm cosine, fallback->INVALID gate).
+# The main working tree (.../260725_stage1_rank_stratification) is the pre-fix code (commit 86849e3)
+# and MUST NOT be run for this experiment.
+HERE=/home/sohyung/SSM_Rank_Analysis/.sh_exp_worktrees/gdn2-rank-stratification-repro/260725_stage1_rank_stratification
+# Guard: hard-fail unless the fixed code is actually present (2 paper_theory_bound refs expected).
+if [ ! -f "$HERE/stage1_repro.py" ]; then
+    echo "ABORT: $HERE/stage1_repro.py not found" >&2; exit 1
+fi
+if [ "$(grep -c paper_theory_bound "$HERE/stage1_repro.py")" -lt 1 ]; then
+    echo "ABORT: $HERE/stage1_repro.py lacks the credibility fixes (paper_theory_bound marker absent)" >&2; exit 1
+fi
+# --stride 16 -> dense t<d=128 growth grid + separated late anchors (256/512/1024/2048) for [B].
+# --require-real-data hard-fails on synthetic fallback. [PIN-6] >=3 seeds (data sampling is now
+# seed-dependent -> real multi-seed variance); each seed to its own out dir, aggregated post-hoc.
+for SEED in 0 1 2; do
+    export PYTHONHASHSEED=$SEED
+    OUT=$HERE/results/stage1_100b_seed${SEED}
+    mkdir -p "$OUT"
+    echo "=== SEED $SEED -> $OUT ==="
+    python "$HERE/stage1_repro.py" \
+        --n-seq 16 --seq-len 2048 --layer-stride 1 --stride 16 --seed $SEED \
+        --require-real-data --resume --out "$OUT"
+done
 echo "STAGE1_DONE"
