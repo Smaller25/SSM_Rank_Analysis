@@ -64,6 +64,24 @@ def _hf_texts(loader):
         return None
 
 
+_DATA_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_cache")
+
+
+def _cached_texts(domain):
+    """Real texts pre-materialized on the login node (which has internet + `datasets`), so the
+    compute node uses REAL data regardless of its own network. Returns list[str] or None."""
+    import json
+    p = os.path.join(_DATA_CACHE, f"{domain}_texts.json")
+    if os.path.isfile(p):
+        try:
+            with open(p) as f:
+                t = json.load(f)
+            return t if t else None
+        except Exception:
+            return None
+    return None
+
+
 def _fallback_texts(domain, seq_len, n_seq, tok):
     """Deterministic synthetic corpus so the pipeline runs offline. Flagged as source=fallback."""
     rng = np.random.default_rng({"wikitext": 1, "github": 2, "arxiv": 3}[domain])
@@ -81,8 +99,10 @@ def make_wikitext(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
         from datasets import load_dataset
         ds = load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1", split="test")
         return [r for r in ds["text"] if r and len(r) > 40]
-    texts = _hf_texts(_load)
-    source = "hf:wikitext-103-raw-v1/test"
+    texts = _cached_texts("wikitext")
+    source = "local_cache:wikitext-103-raw-v1/test"
+    if texts is None:
+        texts = _hf_texts(_load); source = "hf:wikitext-103-raw-v1/test"
     if texts is None:
         texts, source = _fallback_texts("wikitext", seq_len, n_seq, tok), "fallback"
     ids = _tok_chunks(tok, texts, seq_len, n_seq)
@@ -121,12 +141,14 @@ def make_github(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
         (("codeparrot/codeparrot-clean-valid", None, "train"), "content"),   # ungated parquet, python
         (("Nan-Do/code-search-net-python", None, "train"), "code"),          # ungated fallback
     ]
-    texts, source = None, "fallback"
-    for spec, field in trials:
-        t = _hf_texts(lambda s=spec, f=field: _stream_field(s, f, 400))
-        if t:
-            texts, source = t, f"hf:{spec[0]}"
-            break
+    texts = _cached_texts("github")
+    source = "local_cache:github" if texts is not None else "fallback"
+    if texts is None:
+        for spec, field in trials:
+            t = _hf_texts(lambda s=spec, f=field: _stream_field(s, f, 400))
+            if t:
+                texts, source = t, f"hf:{spec[0]}"
+                break
     if texts is None:
         texts = _fallback_texts("github", seq_len, n_seq, tok)
     ids = _tok_chunks(tok, texts, seq_len, n_seq)
@@ -141,12 +163,14 @@ def make_arxiv(tok, seq_len=SEQ_LEN_DEFAULT, n_seq=N_SEQ_DEFAULT):
         (("neuralwork/arxiver", None, "train"), "abstract"),
         (("armanc/scientific_papers", "arxiv", "test"), "article"),   # if parquet mirror available
     ]
-    texts, source = None, "fallback"
-    for spec, field in trials:
-        t = _hf_texts(lambda s=spec, f=field: _stream_field(s, f, 200))
-        if t:
-            texts, source = t, f"hf:{spec[0]}"
-            break
+    texts = _cached_texts("arxiv")
+    source = "local_cache:arxiv" if texts is not None else "fallback"
+    if texts is None:
+        for spec, field in trials:
+            t = _hf_texts(lambda s=spec, f=field: _stream_field(s, f, 200))
+            if t:
+                texts, source = t, f"hf:{spec[0]}"
+                break
     if texts is None:
         texts = _fallback_texts("arxiv", seq_len, n_seq, tok)
     ids = _tok_chunks(tok, texts, seq_len, n_seq)
