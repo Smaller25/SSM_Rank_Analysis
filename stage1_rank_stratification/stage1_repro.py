@@ -405,13 +405,14 @@ def main():
         return _smoke(args)
 
     import loader_gdn2
-    print(f"[load] gdn2-1.3B checkpoint={args.ckpt} config={CONFIG_NAME} [PIN-1]", flush=True)
+    print(f"[load] gdn2-1.3B checkpoint={args.ckpt} config={loader_gdn2.CONFIG_NAME} [PIN-1]", flush=True)
     bundle = loader_gdn2.load(checkpoint_path=args.ckpt)
     from transformers import AutoTokenizer
     import common as gdn2_common
     tok = AutoTokenizer.from_pretrained(gdn2_common.TOKENIZER)
 
     report = run(bundle, tok, args)
+    report["ckpt_provenance"] = getattr(bundle, "ckpt_provenance", None)   # [PIN-1] resolved path/size/hash
     out = os.path.join(args.out, "stage1_report.json")
     with open(out, "w") as f:
         json.dump(report, f, indent=2)
