@@ -109,12 +109,13 @@ def evaluate_condition(bundle, tok, masker, mask_set, domain_ids, args):
     the caller between conditions."""
     reset_shared_cache(bundle)   # [fix blocker-1/2] purge stale recurrent state from classification
     masker.set_mask(mask_set)
+    kv = masker.kv_reduction(mask_set)   # TRUE KV-state pruning: memory footprint freed (cf. paper 38.9%)
     niah = niah_retrieval.run_niah(
         bundle, tok, n_samples=args.niah_samples, max_seq_length=args.seq_len,
         tokens_to_generate=args.gen_tokens, seed=args.seed)
     ppl = ppl_eval.run_ppl(bundle, domain_ids)
     masker.clear()
-    return {"n_masked": len(mask_set),
+    return {"n_masked": len(mask_set), "kv_reduction": kv,
             "niah": niah, "ppl": ppl,
             "niah_retrieval_accuracy": niah["niah_retrieval_accuracy"],
             "macro_ppl": ppl["_macro"]["mean_ppl"]}
@@ -140,14 +141,23 @@ def compute_verdict(conds):
     niah_asym = bool(dn["low"] > dn["high"] and dn["low"] > dn["random"])
     ppl_asym = bool(dp["low"] > dp["high"] and dp["low"] > dp["random"])
     high_not_worse = bool(dn["high"] <= dn["random"] + 1e-9 and dp["high"] <= dp["random"] + 1e-9)
+    # [major] origin-NIAH headroom gate: if the base model can't retrieve at all, NIAH asymmetry is
+    # unmeasurable (floor noise) -> mark UNTESTABLE and fall back to PPL (secondary) as the signal.
+    NIAH_FLOOR = 0.30
+    niah_untestable = bool(not (o_niah >= NIAH_FLOOR))
+    primary = "ppl" if niah_untestable else "niah"
+    g2 = ppl_asym if niah_untestable else niah_asym
     return {
         "origin_niah": o_niah, "origin_macro_ppl": o_ppl,
         "delta_niah_drop": dn, "delta_ppl_rise": dp,
         "niah_asymmetry(low>high & low>random)": niah_asym,
         "ppl_asymmetry(low>high & low>random)": ppl_asym,
         "high_no_worse_than_random": high_not_worse,
-        "G2_asymmetry_seed": bool(niah_asym or ppl_asym),   # per-seed signal; aggregate across seeds
-        "note": "G2 confirmed only if asymmetry holds on aggregate across >=3 seeds; PPL is secondary.",
+        "niah_untestable_floor": niah_untestable, "niah_floor_threshold": NIAH_FLOOR,
+        "primary_dv": primary,
+        "G2_asymmetry_seed": bool(g2),   # per-seed signal (PPL if NIAH floored); aggregate across seeds
+        "note": ("G2 confirmed only on aggregate across >=3 seeds. If origin NIAH < %.2f the primary DV "
+                 "falls back to PPL (NIAH untestable at floor)." % NIAH_FLOOR),
     }
 
 
@@ -183,6 +193,10 @@ def run_seed(bundle, tok, masker, args, out_dir):
     rand = draw_random_heads(all_heads, k, seed=args.seed)   # PIN-6: seed governs the draw
     assert len(low) == len(high) == len(rand) == k, (
         f"count-match violated: |low|={len(low)} |high|={len(high)} |rand|={len(rand)} k={k}")
+    # [major] low and high head sets MUST be disjoint or the low-vs-high contrast axis is contaminated.
+    assert set(low).isdisjoint(set(high)), (
+        f"low/high overlap ({len(set(low) & set(high))} shared heads) -> contrast axis contaminated; "
+        f"reduce k or use median/quantile split in head_classifier.")
     mask_sets = {"origin": set(), "high": set(high), "low": set(low), "random": set(rand)}
 
     # ---- shared eval data drawn ONCE per seed (same across conditions; only mask changes) ----
@@ -284,8 +298,9 @@ def main():
     bundle = loader_gdn2.load(checkpoint_path=args.ckpt)      # resolve_and_assert_ckpt inside
     tok = AutoTokenizer.from_pretrained(gdn2_common.TOKENIZER)
     masker = head_mask.HeadMasker(bundle)
-    print(f"[mask] installed o_norm hooks on {masker.n_layers} layers x {masker.num_heads} heads "
-          f"= {masker.n_layers * masker.num_heads} heads", flush=True)
+    print(f"[mask] TRUE KV-state pruning: v_conv1d hooks on {masker.n_layers} layers x "
+          f"{masker.num_heads} heads = {masker.n_layers * masker.num_heads} heads "
+          f"(zero head value -> S_h=0, frees KV state; accuracy == output-ablation in GDN2)", flush=True)
 
     report = run_seed(bundle, tok, masker, args, args.out)
     report["prereg_caveat"] = PREREG_CAVEAT

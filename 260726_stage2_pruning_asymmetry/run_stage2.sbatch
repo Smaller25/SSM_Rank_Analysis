@@ -19,6 +19,7 @@
 set -e
 source /home/sohyung/sh_gdn2_venv/bin/activate
 export TRITON_CACHE_DIR=/home/sohyung/.triton_cache HF_HUB_DISABLE_XET=1
+export HF_HOME=/data2/sohyung/hf_home HF_DATASETS_CACHE=/data2/sohyung/hf_home/datasets  # [major] scratch on /data2, not root disk
 export GDN2_CKPT_PATH=/home/sohyung/models/gdn2_1.3B_100b.pth   # [PIN-1] 100B paper-matched (10B rejected)
 # Per-head SVD is CPU-side (classifier) -> cap BLAS threads to avoid oversubscription.
 export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
