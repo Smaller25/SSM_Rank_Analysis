@@ -106,12 +106,16 @@ def classify(bundle, tok, seq_len=2048, n_seq=16, seed=0, theta=THETA_R,
     agg = {h: float(np.nanmean([per_domain[d].get(h, np.nan) for d in doms])) for h in heads}
     low_by_theta = [h for h in heads if agg[h] <= theta]
     high_by_theta = [h for h in heads if agg[h] > theta]
-    # count-match to k = #low (paper's groups are equal-count masks): bottom-k low, top-k high.
-    k = len(low_by_theta)
+    # count-match to k = min(#low, #high) so the bottom-k LOW and top-k HIGH sets are DISJOINT
+    # (2k <= n guaranteed). Using #low alone would make k>n/2 when the rank distribution is skewed
+    # low, so order[:k] and order[-k:] overlap and contaminate the low-vs-high contrast.
+    k = min(len(low_by_theta), len(high_by_theta))
     order = sorted(heads, key=lambda h: agg[h])       # ascending normalized rank
     low_heads = order[:k]                             # k lowest-rank heads
     high_heads = order[-k:] if k > 0 else []          # k highest-rank heads
-    # guard: with theta=0.5 on a bimodal set, low_by_theta should equal bottom-k; log any mismatch.
+    assert set(low_heads).isdisjoint(set(high_heads)), "classifier: low/high still overlap after k=min"
+    prune_fraction = round(k / len(heads), 4) if heads else 0.0   # KV-reduction fraction (cf. paper 38.9%)
+    # guard: log how bottom-k differs from the theta partition (skew diagnostic).
     mismatch_low = sorted(set(low_heads) ^ set(low_by_theta))
 
     per_head = [{"layer": li, "head": h,
@@ -124,6 +128,8 @@ def classify(bundle, tok, seq_len=2048, n_seq=16, seed=0, theta=THETA_R,
         "eps_threshold_rank": EPS_THRESHOLD_RANK,
         "n_heads_total": len(heads),
         "k": k,
+        "prune_fraction": prune_fraction,
+        "n_low_by_theta": len(low_by_theta), "n_high_by_theta": len(high_by_theta),
         "low_heads": [list(h) for h in low_heads],
         "high_heads": [list(h) for h in high_heads],
         "low_by_theta": [list(h) for h in low_by_theta],
