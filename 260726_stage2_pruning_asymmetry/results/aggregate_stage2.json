@@ -1,0 +1,122 @@
+{
+  "n_seeds": 3,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "primary_dv": "ppl",
+  "niah_floored_majority": true,
+  "per_condition": {
+    "origin": {
+      "niah_acc": {
+        "mean": 0.18333333333333335,
+        "std": 0.04714045207910317,
+        "n": 3
+      },
+      "macro_ppl": {
+        "mean": 12.610003417597085,
+        "std": 0.3586320341073077,
+        "n": 3
+      }
+    },
+    "high": {
+      "niah_acc": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 3
+      },
+      "macro_ppl": {
+        "mean": 854.2807154068582,
+        "std": 101.19282826722184,
+        "n": 3
+      }
+    },
+    "low": {
+      "niah_acc": {
+        "mean": 0.016666666666666666,
+        "std": 0.023570226039551587,
+        "n": 3
+      },
+      "macro_ppl": {
+        "mean": 39.368069549111546,
+        "std": 2.9530949162928293,
+        "n": 3
+      }
+    },
+    "random": {
+      "niah_acc": {
+        "mean": 0.0,
+        "std": 0.0,
+        "n": 3
+      },
+      "macro_ppl": {
+        "mean": 34.43887464899535,
+        "std": 1.6902509911595736,
+        "n": 3
+      }
+    }
+  },
+  "delta_niah_drop_vs_origin": {
+    "low": {
+      "mean": 0.16666666666666666,
+      "std": 0.062360956446232366,
+      "n": 3
+    },
+    "high": {
+      "mean": 0.18333333333333335,
+      "std": 0.04714045207910317,
+      "n": 3
+    },
+    "random": {
+      "mean": 0.18333333333333335,
+      "std": 0.04714045207910317,
+      "n": 3
+    }
+  },
+  "delta_ppl_rise_vs_origin": {
+    "low": {
+      "mean": 26.758066131514465,
+      "std": 2.5978314163434635,
+      "n": 3
+    },
+    "high": {
+      "mean": 841.6707119892612,
+      "std": 100.86843304834193,
+      "n": 3
+    },
+    "random": {
+      "mean": 21.828871231398267,
+      "std": 1.6791949687262038,
+      "n": 3
+    }
+  },
+  "kv_reduction": {
+    "high": {
+      "n_masked": 124,
+      "total_heads": 288,
+      "per_head_state_elems": 16384,
+      "kv_reduction_fraction": 0.4305555555555556,
+      "kv_reduction_pct": 43.06
+    },
+    "low": {
+      "n_masked": 124,
+      "total_heads": 288,
+      "per_head_state_elems": 16384,
+      "kv_reduction_fraction": 0.4305555555555556,
+      "kv_reduction_pct": 43.06
+    },
+    "random": {
+      "n_masked": 124,
+      "total_heads": 288,
+      "per_head_state_elems": 16384,
+      "kv_reduction_fraction": 0.4305555555555556,
+      "kv_reduction_pct": 43.06
+    }
+  },
+  "G2_niah(low>high & low>random, aggregate)": false,
+  "G2_ppl(low>high & low>random, aggregate)": false,
+  "G2_FINAL": false,
+  "verdict": "G2=NO: asymmetry not reproduced on aggregate -> record as generalization limit (hybrid/post-training specific?), reframe before Stage 3",
+  "prereg_caveat": "paper 93.8/46.9/90.6/38.9% = Qwen3-Next(48L, post-trained) TARGET lines, not pass standards for 18L gdn2 [PIN-4]"
+}
