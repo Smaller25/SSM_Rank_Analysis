@@ -152,20 +152,23 @@ def frac_subset(heads, frac, seed, salt=0):
 
 
 # --------------------------------------------------------------------------------- INT-1 (single-shot)
-def run_int1_prune_fraction(bundle, tok, masker, groups, all_heads, domain_ids, args):
-    """int-1: KV-state v-zeroing of a FRACTION of each group's heads. Reuses head_mask AS-IS (v-zero
-    == zero-state), single-shot PPL (no surgery). Returns {group:{frac:{macro_ppl,...}}}."""
-    out = {g: {} for g in groups}
-    total_heads = masker.n_layers * masker.num_heads
-    for g, heads in groups.items():
-        for frac in PRUNE_FRACTIONS:
-            key = f"{frac:.3f}"
-            # random group: draw the fraction from the WHOLE head pool (count-matched control);
-            # high/low: from that group's ranked heads.
-            if g == "random":
-                sub = frac_subset(all_heads, frac, seed=args.seed, salt=int(frac * 1000))
-            else:
-                sub = frac_subset(heads, frac, seed=args.seed, salt=int(frac * 1000))
+def run_int1_prune_fraction(bundle, tok, masker, ranked_heads, domain_ids, args):
+    """int-1: COUNT-MATCHED prune-fraction sweep (fix major int-1). At fraction f, mask exactly
+    n=round(f*total) heads in EACH arm so the KV fraction (=n/total) is identical across arms and
+    directly comparable to the paper's 38.9%: high = top-n by rank, low = bottom-n, random = seeded
+    random-n from all heads. `ranked_heads` = all (layer,head) sorted by ascending agg_norm_rank.
+    Single-shot PPL (v-zero == zero-state, no surgery)."""
+    out = {"high": {}, "low": {}, "random": {}}
+    total = len(ranked_heads)                       # = n_layers * num_heads
+    for frac in PRUNE_FRACTIONS:
+        n = int(round(frac * total))
+        key = f"{frac:.3f}"
+        low_sub = [tuple(h) for h in ranked_heads[:n]]                    # lowest-rank n
+        high_sub = [tuple(h) for h in ranked_heads[total - n:]] if n > 0 else []  # highest-rank n
+        rng = np.random.default_rng(int(args.seed) * 131 + int(frac * 1000))
+        ridx = sorted(rng.permutation(total)[:n].tolist()) if n > 0 else []
+        rand_sub = [tuple(ranked_heads[i]) for i in ridx]
+        for g, sub in (("high", high_sub), ("low", low_sub), ("random", rand_sub)):
             reset_shared_cache(bundle)
             masker.set_mask(set(sub))
             kv = masker.kv_reduction(set(sub))
@@ -366,6 +369,15 @@ def run_seed(bundle, tok, masker, args, out_dir):
               f"head sets UNTRUSTED; results flagged.", flush=True)
 
     all_heads = [(h["layer"], h["head"]) for h in cls["per_head"]]
+    # rank-ordered (ascending agg_norm_rank) full head list for the count-matched int-1 sweep (fix int-1)
+    ranked_heads = [(h["layer"], h["head"]) for h in
+                    sorted(cls["per_head"], key=lambda x: x.get("agg_norm_rank", 0.0))]
+    # [fix major] runtime head-count provenance: config n_head can differ from the mixer's num_heads.
+    total_heads_rt = masker.n_layers * masker.num_heads
+    print(f"  [heads] runtime num_heads={masker.num_heads} x n_layers={masker.n_layers} "
+          f"= {total_heads_rt} total (Stage1/2 used 288); n_ranked={len(ranked_heads)}", flush=True)
+    assert total_heads_rt == len(all_heads), (
+        f"head-count mismatch: masker {total_heads_rt} vs classifier {len(all_heads)}")
     low = [tuple(x) for x in cls["low_heads"]]
     high = [tuple(x) for x in cls["high_heads"]]
     k = cls["k"]
@@ -422,7 +434,7 @@ def run_seed(bundle, tok, masker, args, out_dir):
         return res_wrapped
 
     int1 = stage("int1_prune_fraction",
-                 lambda: run_int1_prune_fraction(bundle, tok, masker, groups, all_heads,
+                 lambda: run_int1_prune_fraction(bundle, tok, masker, ranked_heads,
                                                  domain_ids, args))["data"]
     int2 = stage("int2_topr",
                  lambda: run_int2_topr(surgeon, groups, domain_ids, args))["data"]
@@ -690,7 +702,9 @@ def _smoke(args):
                             "set_mask": lambda self, s: None, "clear": lambda self: None,
                             "kv_reduction": lambda self, s: {"kv_reduction_pct": 0.0}})()
     # int-1 needs ppl_eval.run_ppl on the fake bundle (single-shot); patch masker minimally
-    int1 = run_int1_prune_fraction(bundle, tok, masker, groups, all_heads, domain_ids, args)
+    ranked_heads = [(h["layer"], h["head"]) for h in
+                    sorted(cls["per_head"], key=lambda x: x.get("agg_norm_rank", 0.0))]
+    int1 = run_int1_prune_fraction(bundle, tok, masker, ranked_heads, domain_ids, args)
     int2 = run_int2_topr(surgeon, groups, domain_ids, args)
     int3 = run_int3_noise_ladder(surgeon, groups, domain_ids, args)
     verdict = compute_verdict(int1, int2, int3, control, origin_niah=None)
