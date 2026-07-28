@@ -78,16 +78,26 @@ def main():
             if c in cf and "kv_reduction" in cf[c]:
                 kv[c] = cf[c]["kv_reduction"]
 
+    MARGIN = 0.10   # [PREREG] same effect-size margin (bits) as the per-seed driver (RECALL_SPECIFIC_MARGIN)
     # majority headroom gate: need origin gain > threshold in > half the seeds
     headroom_majority = sum(headroom_flags) > len(headroom_flags) / 2
     drH, drL, drR = _ms(dr_high), _ms(dr_low), _ms(dr_rand)
     dlH, dlL, dlR = _ms(dl_high), _ms(dl_low), _ms(dl_rand)
+    og = _ms(origin_gain)["mean"]
+    collapse_frac = {"high": drH["mean"] / og if og else float("nan"),
+                     "low": drL["mean"] / og if og else float("nan"),
+                     "random": drR["mean"] / og if og else float("nan")}
 
-    recall_specific = bool(drH["mean"] > dlH["mean"])                 # Delta_recall(high) > Delta_local(high)
-    high_vs_low = bool(drH["mean"] > drL["mean"])
-    high_vs_random = bool(drH["mean"] > drR["mean"])
-    high_specific = bool(high_vs_low and high_vs_random)
-    recall_role = bool(headroom_majority and recall_specific and high_specific)
+    # aggregate uses a REAL effect-size margin (not bare '>') on the mean...
+    recall_specific = bool(drH["mean"] > dlH["mean"] + MARGIN)        # (a) necessary
+    high_vs_low = bool(drH["mean"] > drL["mean"] + MARGIN)
+    high_vs_random = bool(drH["mean"] > drR["mean"] + MARGIN)
+    high_specific = bool(high_vs_low and high_vs_random)              # (b) primary
+    # ...AND seed sign-consistency: HIGH must beat both controls in a MAJORITY of individual seeds
+    n = len(dr_high)
+    per_seed_high_wins = [int(dr_high[i] > dr_low[i] and dr_high[i] > dr_rand[i]) for i in range(n)]
+    sign_consistent = bool(sum(per_seed_high_wins) > n / 2)
+    recall_role = bool(headroom_majority and recall_specific and high_specific and sign_consistent)
 
     if not headroom_majority:
         status = "UNTESTABLE_HEADROOM"
@@ -107,10 +117,14 @@ def main():
         "delta_recall_vs_origin": {"high": drH, "low": drL, "random": drR},
         "delta_local_vs_origin": {"high": dlH, "low": dlL, "random": dlR},
         "kv_reduction": kv,
-        "recall_specific_high(dRecall>dLocal, aggregate)": recall_specific,
-        "high_vs_low(dRecall_high>dRecall_low)": high_vs_low,
-        "high_vs_random(dRecall_high>dRecall_random)": high_vs_random,
-        "high_recall_specific(vs low & random)": high_specific,
+        "margin_bits": MARGIN,
+        "recall_collapse_frac(dRecall/origin_gain)": collapse_frac,
+        "recall_specific_high(dRecall>dLocal+margin, a-necessary)": recall_specific,
+        "high_vs_low(dRecall_high>dRecall_low+margin)": high_vs_low,
+        "high_vs_random(dRecall_high>dRecall_random+margin)": high_vs_random,
+        "high_recall_specific(b-primary, vs low & random)": high_specific,
+        "seed_sign_consistent(HIGH beats both controls in majority of seeds)": sign_consistent,
+        "n_seeds_high_wins_both": sum(per_seed_high_wins),
         "RECALL_ROLE_FINAL": recall_role,
         "STATUS_FINAL": status,
         "verdict": (

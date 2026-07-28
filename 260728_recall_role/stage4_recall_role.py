@@ -6,12 +6,19 @@ REAL text (Olsson et al. 2022): each real passage A (length L) is repeated once 
 per-token NLL is split into local_bits (first copy, no recall) vs recall_bits (second copy, recall
 possible). induction_gain = local_bits - recall_bits (>0 => in-context recall is working).
 
+Paper direction (arXiv:2602.02195, Qwen3-Next HYBRID): the paper finds HIGH-rank heads REDUNDANT
+/prunable and LOW-rank heads retrieval-INDISPENSABLE. Our Stage 2 (pure GDN) reversed this. This
+probe tests, in pure GDN, whether HIGH-rank's damage is RECALL-specific -> if so, HIGH-rank is the
+recall unit, which REFUTES the paper's "HIGH-rank = prunable/oversaturated junk" reading at the role
+level. (We do NOT attribute "high-rank = recall" to the paper; the paper claims the opposite.)
+
 H(recall-role): HIGH-rank heads are in-context RECALL units, so pruning them collapses
-induction_gain SPECIFICALLY on the recall segment, while LOW/random pruning does not. Signature:
-    Delta_recall(high) >> Delta_local(high)   (recall-specific, not a uniform PPL hit)     AND
-    Delta_recall(high) >> Delta_recall(low/random)                                          .
-NULL/reversal (Delta_recall(high) ~ Delta_local(high), or ~ low/random) = HIGH-rank is NOT
-recall-specific -> record as a LIMITATION, not a code failure.
+induction_gain SPECIFICALLY on the recall segment, while LOW/random pruning does not. Signature
+(pre-registered margin RECALL_SPECIFIC_MARGIN=0.10 bits, headroom-normalized primary metric):
+    (b PRIMARY)   Delta_recall(high) > Delta_recall(low/random) + margin   (HIGH vs controls)
+    (a NECESSARY) Delta_recall(high) > Delta_local(high) + margin          (recall- not uniform-hit)
+    recall_collapse_frac(c) = Delta_recall(c)/origin_induction_gain (fraction of recall lost).
+NULL/reversal = HIGH-rank is NOT recall-specific -> record as a LIMITATION, not a code failure.
 
 Four count-matched conditions (identical k across high/low/random, PIN-4):
   origin  : no masking (baseline for all deltas)
@@ -70,7 +77,9 @@ import induction_probe          # noqa: E402  (Stage 4 new: probe build + segmen
 
 CROSS_DOMAIN_AGREEMENT_MIN = 0.90   # sanity gate (Stage 1 was 0.971); below -> classification untrusted
 HEADROOM_GAIN_BITS = 0.30           # [PREREG] origin induction_gain must exceed this or UNTESTABLE
-RECALL_SPECIFIC_MARGIN = 1e-9       # ">>": we require strict inequality (aggregate applies the real margin)
+RECALL_SPECIFIC_MARGIN = 0.10       # [PREREG] real effect-size margin (bits): ">>" means the HIGH-rank
+                                    # recall damage must exceed the low/random control (and the local
+                                    # segment) by >= 0.10 bits. (was 1e-9 = no margin -> noise passed.)
 PREREG_CAVEAT = ("paper 93.8/46.9/90.6 NIAH + KV 38.9% are Qwen3-Next (48-layer, POST-TRAINED) "
                  "OBSERVATIONS adopted as reproduction TARGET lines, NOT pass standards for 18-layer "
                  "gdn2; falling short = generalization/role limitation to record, not code failure.")
@@ -130,17 +139,24 @@ def evaluate_condition(bundle, masker, mask_set, domain_seqs, passage_len):
 def compute_verdict(conds):
     """recall-role verdict from the four conditions of ONE seed.
 
-    Baseline = origin. For each pruned condition:
-      Delta_recall = recall_bits(cond) - recall_bits(origin)   (rise in recall-segment NLL)
-      Delta_local  = local_bits(cond)  - local_bits(origin)    (rise in local-segment NLL)
-    HIGH-rank = recall unit requires the recall-specific signature:
-      (a) Delta_recall(high) > Delta_local(high)                  (damage concentrated on RECALL, not
-                                                                    a uniform PPL hit)
-      (b) Delta_recall(high) > Delta_recall(low) AND > Delta_recall(random)   (HIGH-specific vs
-                                                                    the low/random controls)
-    Headroom gate: if origin induction_gain <= 0.30 bits the probe cannot show recall loss ->
-    UNTESTABLE_HEADROOM (verdict withheld). NULL/reversal (either (a) or (b) fails) = HIGH-rank NOT
-    recall-specific -> LIMITATION, not a code failure.
+    Paper direction (arXiv:2602.02195, Qwen3-Next HYBRID, post-trained): HIGH-rank heads are REDUNDANT
+    /prunable (NIAH 93.8->90.6 negligible), LOW-rank heads are retrieval-INDISPENSABLE (93.8->46.9
+    collapse). Our Stage 2 (pure GDN) REVERSED this (HIGH-rank pruning catastrophic, LOW-rank ~ random).
+    This probe asks the ROLE question in pure GDN: is HIGH-rank's damage RECALL-specific? If yes, HIGH-
+    rank = the recall unit -> refutes the paper's "HIGH-rank = prunable/oversaturated junk" reading at
+    the functional (role) level. (We do NOT claim the paper says high-rank=recall; it says the opposite.)
+
+    Baseline = origin. Delta_recall(c) = recall_bits(c) - recall_bits(origin); Delta_local likewise.
+      recall_collapse_frac(c) = Delta_recall(c) / origin_induction_gain  = fraction of the model's
+        recall ability that pruning group c destroys (HEADROOM-NORMALIZED; the primary metric, so the
+        recall/local baseline asymmetry does not confound absolute Delta comparisons).
+    PRIMARY axis (b): HIGH destroys recall MORE than the low/random controls, by a pre-registered
+      effect-size margin (RECALL_SPECIFIC_MARGIN bits): Delta_recall(high) > Delta_recall(low)+m AND
+      > Delta_recall(random)+m. (Aggregate additionally requires seed sign-consistency.)
+    NECESSARY axis (a): HIGH's damage is concentrated on RECALL not LOCAL: Delta_recall(high) >
+      Delta_local(high)+m (else it is a uniform PPL hit, i.e. general load-bearing not recall-specific).
+    Headroom gate: origin induction_gain must exceed HEADROOM_GAIN_BITS or UNTESTABLE_HEADROOM.
+    NULL/reversal (primary or necessary fails) = HIGH-rank NOT recall-specific -> LIMITATION.
     """
     o_local = conds["origin"]["local_bits"]
     o_recall = conds["origin"]["recall_bits"]
@@ -151,16 +167,17 @@ def compute_verdict(conds):
 
     dr = {c: d_recall(c) for c in ("high", "low", "random")}
     dl = {c: d_local(c) for c in ("high", "low", "random")}
+    # headroom-normalized recall collapse fraction (primary, robust to recall/local baseline asymmetry)
+    cf = {c: (dr[c] / o_gain if (np.isfinite(o_gain) and o_gain > 1e-6) else float("nan"))
+          for c in ("high", "low", "random")}
 
-    # headroom gate (pre-registered): need origin recall headroom to detect a collapse.
     headroom_ok = bool(np.isfinite(o_gain) and o_gain > HEADROOM_GAIN_BITS)
-
     m = RECALL_SPECIFIC_MARGIN
-    recall_specific_high = bool(dr["high"] > dl["high"] + m)                 # (a)
     high_vs_low = bool(dr["high"] > dr["low"] + m)
     high_vs_random = bool(dr["high"] > dr["random"] + m)
-    high_specific = bool(high_vs_low and high_vs_random)                     # (b)
-    recall_role_seed = bool(headroom_ok and recall_specific_high and high_specific)
+    high_specific = bool(high_vs_low and high_vs_random)                     # (b) PRIMARY, with margin
+    recall_concentrated_high = bool(dr["high"] > dl["high"] + m)            # (a) NECESSARY, with margin
+    recall_role_seed = bool(headroom_ok and high_specific and recall_concentrated_high)
 
     if not headroom_ok:
         status = "UNTESTABLE_HEADROOM"
@@ -170,6 +187,10 @@ def compute_verdict(conds):
         status = "NULL_OR_REVERSAL"   # LIMITATION (not a code failure)
 
     return {
+        "margin_bits": m,
+        "recall_collapse_frac": cf,
+        "high_specific(b,primary)": high_specific,
+        "recall_concentrated_high(a,necessary)": recall_concentrated_high,
         "origin_local_bits": o_local, "origin_recall_bits": o_recall,
         "origin_induction_gain": o_gain,
         "headroom_threshold_bits": HEADROOM_GAIN_BITS,
@@ -177,7 +198,6 @@ def compute_verdict(conds):
         "delta_recall_vs_origin": dr, "delta_local_vs_origin": dl,
         "induction_gain_by_cond": {c: conds[c]["induction_gain"] for c in
                                    ("origin", "high", "low", "random")},
-        "recall_specific_high(dRecall>dLocal)": recall_specific_high,
         "high_vs_low(dRecall_high>dRecall_low)": high_vs_low,
         "high_vs_random(dRecall_high>dRecall_random)": high_vs_random,
         "high_recall_specific(vs low & random)": high_specific,
@@ -460,7 +480,7 @@ def _smoke(args):
             "random": cond(6.1, 5.4)}          # recall barely moves (dRecall=0.4)
     v = compute_verdict(fake)
     assert v["headroom_ok(origin_gain>thr)"], "smoke: origin gain 1.0 > 0.30 headroom"
-    assert v["recall_specific_high(dRecall>dLocal)"], "smoke: dRecall(high) >> dLocal(high)"
+    assert v["recall_concentrated_high(a,necessary)"], "smoke: dRecall(high) >> dLocal(high)"
     assert v["high_recall_specific(vs low & random)"], "smoke: dRecall(high) >> low/random"
     assert v["status"] == "RECALL_ROLE_SUPPORTED", "smoke: planted signature must be SUPPORTED"
 
