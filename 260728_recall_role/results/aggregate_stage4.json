@@ -1,0 +1,158 @@
+{
+  "n_seeds": 3,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "headroom_threshold_bits": 0.3,
+  "origin_induction_gain": {
+    "mean": 2.3803087991950203,
+    "std": 0.02162276094736833,
+    "n": 3
+  },
+  "headroom_majority(origin_gain>thr)": true,
+  "per_condition": {
+    "origin": {
+      "local_bits": {
+        "mean": 3.8293969379849773,
+        "std": 0.1638677302993901,
+        "n": 3
+      },
+      "recall_bits": {
+        "mean": 1.4490881387899572,
+        "std": 0.1448703541499193,
+        "n": 3
+      },
+      "induction_gain": {
+        "mean": 2.3803087991950203,
+        "std": 0.02162276094736833,
+        "n": 3
+      }
+    },
+    "high": {
+      "local_bits": {
+        "mean": 8.971622852649146,
+        "std": 0.11942641451824906,
+        "n": 3
+      },
+      "recall_bits": {
+        "mean": 8.977650618323052,
+        "std": 0.12011260595719686,
+        "n": 3
+      },
+      "induction_gain": {
+        "mean": -0.006027765673907343,
+        "std": 0.002215590652322724,
+        "n": 3
+      }
+    },
+    "low": {
+      "local_bits": {
+        "mean": 5.41682414383775,
+        "std": 0.24453358877401887,
+        "n": 3
+      },
+      "recall_bits": {
+        "mean": 2.3751950556734758,
+        "std": 0.19747925008176398,
+        "n": 3
+      },
+      "induction_gain": {
+        "mean": 3.041629088164273,
+        "std": 0.047801002796758245,
+        "n": 3
+      }
+    },
+    "random": {
+      "local_bits": {
+        "mean": 5.254505849206335,
+        "std": 0.13618910323254818,
+        "n": 3
+      },
+      "recall_bits": {
+        "mean": 3.901592526244144,
+        "std": 0.31355993515628794,
+        "n": 3
+      },
+      "induction_gain": {
+        "mean": 1.3529133229621901,
+        "std": 0.17766977919338173,
+        "n": 3
+      }
+    }
+  },
+  "delta_recall_vs_origin": {
+    "high": {
+      "mean": 7.528562479533093,
+      "std": 0.024934649681420295,
+      "n": 3
+    },
+    "low": {
+      "mean": 0.9261069168835184,
+      "std": 0.05266627700347079,
+      "n": 3
+    },
+    "random": {
+      "mean": 2.4525043874541868,
+      "std": 0.2007227049753062,
+      "n": 3
+    }
+  },
+  "delta_local_vs_origin": {
+    "high": {
+      "mean": 5.142225914664167,
+      "std": 0.04460117554468265,
+      "n": 3
+    },
+    "low": {
+      "mean": 1.5874272058527723,
+      "std": 0.08268712140299506,
+      "n": 3
+    },
+    "random": {
+      "mean": 1.4251089112213566,
+      "std": 0.07878527200371506,
+      "n": 3
+    }
+  },
+  "kv_reduction": {
+    "high": {
+      "n_masked": 124,
+      "total_heads": 288,
+      "per_head_state_elems": 16384,
+      "kv_reduction_fraction": 0.4305555555555556,
+      "kv_reduction_pct": 43.06
+    },
+    "low": {
+      "n_masked": 124,
+      "total_heads": 288,
+      "per_head_state_elems": 16384,
+      "kv_reduction_fraction": 0.4305555555555556,
+      "kv_reduction_pct": 43.06
+    },
+    "random": {
+      "n_masked": 124,
+      "total_heads": 288,
+      "per_head_state_elems": 16384,
+      "kv_reduction_fraction": 0.4305555555555556,
+      "kv_reduction_pct": 43.06
+    }
+  },
+  "margin_bits": 0.1,
+  "recall_collapse_frac(dRecall/origin_gain)": {
+    "high": 3.162851173796914,
+    "low": 0.3890700724194743,
+    "random": 1.0303303454928125
+  },
+  "recall_specific_high(dRecall>dLocal+margin, a-necessary)": true,
+  "high_vs_low(dRecall_high>dRecall_low+margin)": true,
+  "high_vs_random(dRecall_high>dRecall_random+margin)": true,
+  "high_recall_specific(b-primary, vs low & random)": true,
+  "seed_sign_consistent(HIGH beats both controls in majority of seeds)": true,
+  "n_seeds_high_wins_both": 3,
+  "RECALL_ROLE_FINAL": true,
+  "STATUS_FINAL": "RECALL_ROLE_SUPPORTED",
+  "verdict": "RECALL-ROLE=YES: HIGH-rank pruning collapses induction_gain specifically on the RECALL segment (Delta_recall(high) >> Delta_local(high) AND >> low/random) -> HIGH-rank heads are in-context recall units; refutes the paper's oversaturation (high-rank=prunable junk) reading in the role dimension.",
+  "prereg_caveat": "paper 93.8/46.9/90.6/38.9% = Qwen3-Next(48L, post-trained) TARGET lines, not pass standards for 18L gdn2"
+}
