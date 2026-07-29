@@ -3,7 +3,7 @@ Shows: (a) rank histogram (stratification shape), (b) decay r̄ histogram, (c) r
 Reuses loader_gdn2 (kernel-intercept a_t) + rank_metrics + data_stage1 from the Stage-1/2 folders."""
 import sys, os
 S1="/home/sohyung/SSM_Rank_Analysis/260725_stage1_rank_stratification"
-sys.path.insert(0,S1); sys.path.insert(0,"/home/sohyung/SSM_Rank_Analysis/260722_exp")
+sys.path.insert(0,S1); sys.path.insert(0,"/home/sohyung/SSM_Rank_Analysis/legacy/260722_exp")
 sys.path.insert(0,"/home/sohyung/linear-memory-routing")
 os.environ.setdefault("GDN2_CKPT_PATH","/home/sohyung/models/gdn2_1.3B_100b.pth")
 import numpy as np, torch, warnings; warnings.filterwarnings("ignore")

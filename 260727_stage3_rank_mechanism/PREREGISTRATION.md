@@ -62,7 +62,7 @@ as a generalization LIMITATION, not a code failure.
   state (`output_final_state` → `cache["recurrent_state"]`, shape `[N,HV,K,V]`). Single-shot
   final-state surgery would perturb only the LAST token and cannot move PPL. **CHOSEN method =
   SEGMENTED**: split each sequence into segments of **segment_len = 256** (FROZEN), run the model per
-  segment through the loader's SHARED-cache carry (`260722_exp/common.py` monkeypatch forces
+  segment through the loader's SHARED-cache carry (`legacy/legacy/260722_exp/common.py` monkeypatch forces
   `use_cache=True` so the fla `Cache` threads recurrent_state AND conv_state across forwards), apply
   SVD-top-r / spectrum-noise / zero to the returned per-head `S_h` at each boundary, and let the next
   segment's readout flow through the surgered state (`state_surgery.SegmentedSurgeon`).

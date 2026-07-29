@@ -2,7 +2,7 @@
 
 # 고정 크기 recurrent state의 정보 용량 — 중간 보고서
 
-고정 크기 recurrent LM(Mamba-2 SSD 대 Gated DeltaNet)에서 연상 recall을 무엇이 제한하는지, 어떤 정보이론 신호가 그것을 잘 추적하는지, 정보 밀도가 dynamic chunking 길이를 어떻게 정하는지를 다룬다. 모든 결과는 RTX PRO 6000(Blackwell)에서 SLURM으로 돌렸다. 코드는 `notebooks/`, 공용 헬퍼는 `notebooks/capacity_utils.py`, 이론 노트는 `theory/`에 있다.
+고정 크기 recurrent LM(Mamba-2 SSD 대 Gated DeltaNet)에서 연상 recall을 무엇이 제한하는지, 어떤 정보이론 신호가 그것을 잘 추적하는지, 정보 밀도가 dynamic chunking 길이를 어떻게 정하는지를 다룬다. 모든 결과는 RTX PRO 6000(Blackwell)에서 SLURM으로 돌렸다. 코드는 `260720_stage0_capacity_diagnostics/`, 공용 헬퍼는 `260720_stage0_capacity_diagnostics/capacity_utils.py`, 이론 노트는 `theory/`에 있다.
 
 > **범위.** 이 보고서는 진단 성격의 하위 연구(어떤 신호가 용량인가, 상태가 얼마나 담는가, 청킹을 언제 촉발할까)를 다룬다. 실제 end-to-end로 상태를 스냅샷하고 라우팅해서 재사용하는 시스템(H3)은 여기서 의도적으로 제외했고, linear-memory-routing 프로젝트에서 다룬다.
 
@@ -18,50 +18,50 @@
 
 ---
 
-## 1. 신호 카탈로그와 상태 활용도 (`notebooks/information_capacity_signals.ipynb`)
+## 1. 신호 카탈로그와 상태 활용도 (`260720_stage0_capacity_diagnostics/information_capacity_signals.ipynb`)
 여섯 신호 — **S1** effective rank(eRank), **S2** predictive entropy / bits-per-token, **S3** in-context epiplexity, **S4** ground-truth bits, **S5** Rényi-2 / participation-ratio rank, **S6** TwoNN intrinsic dimension — 을 세 데이터셋(MQAR, WikiText-2, A5 state-tracking)과 두 모델에 걸쳐 쟀다.
 
 **상태 활용도는 낮고 데이터에 거의 무관하다.** MQAR에서 peak eRank는 6.99 / 64 = **10.9%**(mamba2), 27.52 / 256 = **10.7%**(GDN-MoM)다. 두 모델 모두 상태 rank의 약 90%를 안 쓴다.
 
 위치별 궤적(Δ = final − initial)과 raw 대 normalized 신호 곡선:
 
-![Δ signal matrix](notebooks/capacity_results/full_matrix_delta.png)
-![signal trajectories (normalized)](notebooks/capacity_results/signal_trajectories.png)
-![signal trajectories (raw)](notebooks/capacity_results/signal_trajectories_raw.png)
+![Δ signal matrix](260720_stage0_capacity_diagnostics/capacity_results/full_matrix_delta.png)
+![signal trajectories (normalized)](260720_stage0_capacity_diagnostics/capacity_results/signal_trajectories.png)
+![signal trajectories (raw)](260720_stage0_capacity_diagnostics/capacity_results/signal_trajectories_raw.png)
 
 Worked example — S1 eRank 대 MQAR load, 두 모델(상태 행렬 크기가 다른 점에 유의):
 
-![eRank vs MQAR load](notebooks/capacity_results/worked_example_S1_D1_both.png)
+![eRank vs MQAR load](260720_stage0_capacity_diagnostics/capacity_results/worked_example_S1_D1_both.png)
 
 ---
 
-## 2. eRank ≠ capacity, 용량 = recall (`notebooks/state_capacity_decodable.ipynb`)
+## 2. eRank ≠ capacity, 용량 = recall (`260720_stage0_capacity_diagnostics/state_capacity_decodable.ipynb`)
 모델 recall(상태 자신의 `C`-read)이 용량 신호다. padded MQAR로 **load**(쌍 개수 `N`)와 **horizon**(문맥 길이 `L`)을 분리하고 eRank를 겹쳐 봤다.
 
 - **LOAD** (`L=512` 고정, `N` 변화): recall이 N=2→200에서 **1.00 → 0.43**으로 떨어지는 동안 eRank는 1.9 → 4.4로 **오른다**. → **반상관**: eRank가 큰 건 여유가 아니라 과부하의 징후다.
 - **HORIZON** (`N=8` 고정, `L=32→4096`으로 패딩): recall은 0.92 → 0.82, eRank는 3.4 → 1.8로 **떨어진다**. → 무관(decoupled)하다.
 
-![load vs horizon](notebooks/state_capacity_results/load_vs_horizon.png)
+![load vs horizon](260720_stage0_capacity_diagnostics/state_capacity_results/load_vs_horizon.png)
 
 **주의(중요, 앞선 과장을 정정).** horizon 축은 정보량이 낮은 filler 토큰 반복으로 패딩했는데, selective SSM은 이걸 거의 무시하기 때문에 쌍들이 4k까지 살아남는다. 실제 긴 문맥은 다양한 내용, 즉 더 많은 키와 간섭이다. 그래서 **길이와 부하는 얽혀 있다.** 정직하게 해석하면, 유한한 상태에는 연상 용량 한계가 있고 긴 문맥은 내용을 더 실어오기 때문에 그 한계를 압박한다는 것이며, 고정 상태 모델이 긴 문맥 recall에서 용량 제한을 받는다는 표준 견해와 일치한다. filler가 섞이지 않은 깨끗한 결과는 LOAD 축이다.
 
 ---
 
-## 3. 정보 밀도 기반 dynamic chunking (`notebooks/dynamic_chunking_by_density.ipynb`)
+## 3. 정보 밀도 기반 dynamic chunking (`260720_stage0_capacity_diagnostics/dynamic_chunking_by_density.ipynb`)
 상태의 용량 신호가 포화할 때 청크를 자른다면, 청크 길이가 입력 정보 밀도에 따라 달라질까? 밀도는 반복 knob으로 통제하고 bits/token으로 측정했다.
 
 - **합성(레벨당 10 seeds):** 청크 길이가 **밀도에 따라 커진다** — epiplexity 기준 Spearman ρ = **0.94**(95% CI [0.89, 0.96]), eRank 기준 ρ = **0.73**([0.53, 0.86]). 포화 관점과 맞는다(밀도가 낮은 반복적 입력은 상태를 빨리 포화시켜 청크가 짧아진다).
 - **자연 passage 교차검증(WikiText passage 48개):** 자연 텍스트의 좁은 밀도 대역 안에서는 관계가 약하거나 퇴화한다 — eRank ρ ≈ **−0.01**([−0.30, 0.28]), epiplexity는 퇴화(청크 1개). → 합성에서의 강한 효과는 반복이 만든 넓은 밀도 범위 때문인 면이 있다.
 
-![chunk boundaries on eRank(t)](notebooks/chunking_results/worked_example_boundaries.png)
-![chunk length vs density (synthetic, 10 seeds)](notebooks/chunking_results/chunk_by_density.png)
-![chunk length vs density (natural passages)](notebooks/chunking_results/natural_passage_chunks.png)
+![chunk boundaries on eRank(t)](260720_stage0_capacity_diagnostics/chunking_results/worked_example_boundaries.png)
+![chunk length vs density (synthetic, 10 seeds)](260720_stage0_capacity_diagnostics/chunking_results/chunk_by_density.png)
+![chunk length vs density (natural passages)](260720_stage0_capacity_diagnostics/chunking_results/natural_passage_chunks.png)
 
 정리: **epiplexity가 더 나은 contents-based 청크 길이 신호**지만, 이는 상태가 아니라 loss/데이터 밀도 측정이며, 밀도→길이 효과는 더 넓은 밀도에서 검증할 필요가 있다.
 
 ---
 
-## 4. update rule 압축비 (`notebooks/stored_vs_used_gap.ipynb`)
+## 4. update rule 압축비 (`260720_stage0_capacity_diagnostics/stored_vs_used_gap.ipynb`)
 상태별 **용량** `C = recall ≥ 0.9를 유지하는 최대 키 수`를 상태 크기로 정규화(같은 메모리)하면, update rule이 메모리를 얼마나 잘 쓰는지 순위 매기는 **압축비**가 된다.
 
 | update rule | state (Mfloat) | C_used@0.9 (raw keys) | **recalled bits / Mfloat** |
@@ -70,7 +70,7 @@ Worked example — S1 eRank 대 MQAR load, 두 모델(상태 행렬 크기가 �
 | plain Gated-DeltaNet (gated delta) | 6.29 | 10.7 | **10.17** |
 | MoM Gated-DeltaNet (mixture) | 31.46 | 11.0 | 2.11 |
 
-![stored vs used, both models](notebooks/stored_vs_used_results/stored_vs_used.png)
+![stored vs used, both models](260720_stage0_capacity_diagnostics/stored_vs_used_results/stored_vs_used.png)
 
 - **SSD ≈ plain gated-delta**가 메모리 단위당 비슷하다(약 10~11 bits/Mfloat). Mamba-2의 raw 용량이 더 높은 것(23 대 11)은 대부분 상태가 약 2배 크기 때문이다(12.6 대 6.3 Mfloat). 용량은 상태 크기에 대체로 선형으로 붙으므로, 이 세팅에서 update rule 자체는 byte당 효율을 크게 바꾸지 않는다.
 - **MoM은 메모리 비효율적이다**: raw recall 이득 없이 상태만 5배 쓴다(유휴 메모리가 크기를 부풀린다). MoM은 update rule이 아니라 mixture wrapper이므로 update-rule 결론에서는 제외한다.
@@ -79,7 +79,7 @@ Worked example — S1 eRank 대 MQAR load, 두 모델(상태 행렬 크기가 �
 
 ---
 
-## 5. update rule 간 eRank ⊥ recall (`notebooks/pretrained_decay_mqar.py`)
+## 5. update rule 간 eRank ⊥ recall (`260720_stage0_capacity_diagnostics/pretrained_decay_mqar.py`)
 사전학습 **5개 update rule**에 in-context MQAR로 recall + 정규화 state eRank를 부하 N에 걸쳐 측정.
 [`gdn2-370m`(lit_gpt)은 보류 — dscpkg chunk 커널이 fla 0.5.1에 없는 `chunk_gla_fwd_o_gk(use_exp2=)`를 호출해 `q_len>64`에서 크래시. gated-delta 점은 `gdn-plain-340m`으로 대체.]
 
@@ -91,7 +91,7 @@ Worked example — S1 eRank 대 MQAR load, 두 모델(상태 행렬 크기가 �
 | gated-linear — `gla-1.3B` (decay) | 0.21 | 0.083 |
 | fixed-decay — `retnet-1.3B` | **0.08 (최악)** | 0.180 |
 
-![recall vs eRank across update rules](notebooks/decay_mqar_results/decay_mqar.png)
+![recall vs eRank across update rules](260720_stage0_capacity_diagnostics/decay_mqar_results/decay_mqar.png)
 
 - **eRank는 recall을 예측하지 못한다.** gated-delta와 RetNet은 eRank가 거의 **같은데(0.181 vs 0.180)** recall은 **정반대(0.47 vs 0.08)**. 다섯 모델 전체로도 eRank(0.08~0.18)와 recall(0.08~0.47) 순서가 뒤섞여 상관 ≈ 0(약간 음). → 반복된 질문의 답: **eRank는 용량/recall/포화 신호가 아니며, 청킹 트리거로 쓰면 안 된다.**
 - **decay ↛ eRank.** decay 모델이 eRank 높은 쪽(RetNet, gdn-plain ≈0.18)과 낮은 쪽(mamba2 0.10, GLA 0.08)에 모두 걸침. no-decay delta는 중간(0.15). "decay가 eRank를 낮춘다" 가설 기각 (앞서 rank-1로 보였던 건 부하 없는 짧은 자연문 착시 — MQAR 부하 걸면 eRank가 큼).

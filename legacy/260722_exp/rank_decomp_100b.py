@@ -15,13 +15,13 @@ import sys, os, math, warnings
 os.environ.setdefault("GDN2_CKPT_PATH", "/home/sohyung/models/gdn2_1.3B_100b.pth")
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 sys.path.insert(0, "/home/sohyung/linear-memory-routing")            # vendored fla 0.5.2
-sys.path.insert(0, "/home/sohyung/SSM_Rank_Analysis/260722_exp")     # common.py (canonical loader)
+sys.path.insert(0, "/home/sohyung/SSM_Rank_Analysis/legacy/260722_exp")     # common.py (canonical loader)
 warnings.filterwarnings("ignore")
 import numpy as np, torch
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 import common
 
-OUT = "/home/sohyung/SSM_Rank_Analysis/260722_exp/260726_f6f7s14_100b"
+OUT = "/home/sohyung/SSM_Rank_Analysis/legacy/260722_exp/260726_f6f7s14_100b"
 os.makedirs(OUT, exist_ok=True)
 
 bundle = common.load_model()          # Config.from_name, strict=False, bf16, fused_recurrent, cache

@@ -13,7 +13,7 @@ GDN2 readout `o_t = S_t q_t` is INSIDE the fused/chunk kernel; the forward expos
 state (`output_final_state` → `cache["recurrent_state"]`, `[N,HV,K,V]`). Single-shot final-state
 surgery would perturb only the last token and cannot move PPL. So we run the model **per segment**
 (`segment_len=256`, FROZEN), carry state through the loader's SHARED fla-`Cache` monkeypatch
-(`260722_exp/common.py`, which threads recurrent+conv state and forces `use_cache=True`), and apply
+(`legacy/legacy/260722_exp/common.py`, which threads recurrent+conv state and forces `use_cache=True`), and apply
 surgery to each targeted head's `S_h` **at every segment boundary** before it becomes the next
 segment's `initial_state`. The readout of every later token then flows through the surgered state ⇒
 causal, PPL-visible. **S=1 control** (`segment_len ≥ seq_len` ⇒ 1 segment, no boundary, no surgery)

@@ -16,7 +16,7 @@ import numpy as np
 import torch
 
 # --- [PIN-3] reuse the canonical entropy eRank / stable rank ----------------------------------
-# capacity_utils lives in <repo>/notebooks/. Add it to path robustly (worktree-relative).
+# capacity_utils lives in <repo>/260720_stage0_capacity_diagnostics/. Add it to path robustly (worktree-relative).
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _NB_CANDS = [
     os.path.join(_HERE, "..", "notebooks"),          # worktree layout

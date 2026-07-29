@@ -4,8 +4,8 @@
 
 Study of what limits associative recall in fixed-size recurrent LMs (Mamba-2 SSD vs Gated DeltaNet),
 which information-theoretic signal tracks it, and how information density sets a dynamic-chunking length.
-All results run on an RTX PRO 6000 (Blackwell) via SLURM; code in `notebooks/`, shared helpers in
-`notebooks/capacity_utils.py`, theory notes in `theory/`.
+All results run on an RTX PRO 6000 (Blackwell) via SLURM; code in `260720_stage0_capacity_diagnostics/`, shared helpers in
+`260720_stage0_capacity_diagnostics/capacity_utils.py`, theory notes in `theory/`.
 
 > **Scope.** This report covers the *diagnostic* sub-study (which signal = capacity, how much a state
 > holds, how to trigger chunking). The end-to-end **snapshot→route→reuse** system (H3) is deliberately
@@ -36,7 +36,7 @@ pretrained general LMs, **not** trained on the synthetic MQAR task (so recall is
 
 ---
 
-## 1. Signal catalog & state utilization (`notebooks/information_capacity_signals.ipynb`)
+## 1. Signal catalog & state utilization (`260720_stage0_capacity_diagnostics/information_capacity_signals.ipynb`)
 Six signals — **S1** effective rank (eRank), **S2** predictive entropy / bits-per-token, **S3**
 in-context epiplexity, **S4** ground-truth bits, **S5** Rényi-2 / participation-ratio rank, **S6** TwoNN
 intrinsic dimension — over three datasets (MQAR, WikiText-2, A5 state-tracking) and two models.
@@ -46,17 +46,17 @@ intrinsic dimension — over three datasets (MQAR, WikiText-2, A5 state-tracking
 
 Per-position trajectories (Δ = final − initial) and raw vs normalized signal curves:
 
-![Δ signal matrix](notebooks/capacity_results/full_matrix_delta.png)
-![signal trajectories (normalized)](notebooks/capacity_results/signal_trajectories.png)
-![signal trajectories (raw)](notebooks/capacity_results/signal_trajectories_raw.png)
+![Δ signal matrix](260720_stage0_capacity_diagnostics/capacity_results/full_matrix_delta.png)
+![signal trajectories (normalized)](260720_stage0_capacity_diagnostics/capacity_results/signal_trajectories.png)
+![signal trajectories (raw)](260720_stage0_capacity_diagnostics/capacity_results/signal_trajectories_raw.png)
 
 Worked example — S1 eRank vs MQAR load, both models (note the different state-matrix sizes):
 
-![eRank vs MQAR load](notebooks/capacity_results/worked_example_S1_D1_both.png)
+![eRank vs MQAR load](260720_stage0_capacity_diagnostics/capacity_results/worked_example_S1_D1_both.png)
 
 ---
 
-## 2. eRank ≠ capacity; capacity = recall (`notebooks/state_capacity_decodable.ipynb`)
+## 2. eRank ≠ capacity; capacity = recall (`260720_stage0_capacity_diagnostics/state_capacity_decodable.ipynb`)
 Model recall (the state's own `C`-read) is the capacity signal. We disentangle **load** (# pairs `N`)
 from **horizon** (context length `L`) with padded MQAR, and overlay eRank.
 
@@ -64,7 +64,7 @@ from **horizon** (context length `L`) with padded MQAR, and overlay eRank.
   → **anti-correlated**: more eRank is an *overload* symptom, not headroom.
 - **HORIZON** (`N=8` fixed, pad to `L=32→4096`): recall 0.92 → 0.82, eRank **falls** 3.4 → 1.8. → decoupled.
 
-![load vs horizon](notebooks/state_capacity_results/load_vs_horizon.png)
+![load vs horizon](260720_stage0_capacity_diagnostics/state_capacity_results/load_vs_horizon.png)
 
 **Caveat (important, corrects an earlier overstatement).** The horizon axis pads with a repeated
 low-information filler token, which a selective SSM largely ignores — so the pairs survive to 4k. Real
@@ -75,7 +75,7 @@ models are capacity-limited on long-context recall. The clean, filler-free resul
 
 ---
 
-## 3. Dynamic chunking by information density (`notebooks/dynamic_chunking_by_density.ipynb`)
+## 3. Dynamic chunking by information density (`260720_stage0_capacity_diagnostics/dynamic_chunking_by_density.ipynb`)
 If we cut a chunk when the state's capacity signal plateaus, does chunk length depend on input
 information density? Density is set by a controlled repetition knob and measured as bits/token.
 
@@ -86,16 +86,16 @@ information density? Density is set by a controlled repetition knob and measured
   relation is weak/degenerate — eRank ρ ≈ **−0.01** ([−0.30, 0.28]), epiplexity degenerate (one chunk).
   → the strong synthetic effect is partly an artifact of the wide density range that repetition creates.
 
-![chunk boundaries on eRank(t)](notebooks/chunking_results/worked_example_boundaries.png)
-![chunk length vs density (synthetic, 10 seeds)](notebooks/chunking_results/chunk_by_density.png)
-![chunk length vs density (natural passages)](notebooks/chunking_results/natural_passage_chunks.png)
+![chunk boundaries on eRank(t)](260720_stage0_capacity_diagnostics/chunking_results/worked_example_boundaries.png)
+![chunk length vs density (synthetic, 10 seeds)](260720_stage0_capacity_diagnostics/chunking_results/chunk_by_density.png)
+![chunk length vs density (natural passages)](260720_stage0_capacity_diagnostics/chunking_results/natural_passage_chunks.png)
 
 Takeaway: **epiplexity is the better contents-based chunk-length signal**, but it is a loss/data-density
 measure (not a state measure), and the density→length effect needs a wider-density validation.
 
 ---
 
-## 4. Update-rule compression ratio (`notebooks/stored_vs_used_gap.ipynb`)
+## 4. Update-rule compression ratio (`260720_stage0_capacity_diagnostics/stored_vs_used_gap.ipynb`)
 Per-state **capacity** `C = max # keys retrievable at recall ≥ 0.9`, normalized by state size (matched
 memory) → a **compression ratio** that ranks *update rules* by how well the recurrence uses memory.
 
@@ -105,7 +105,7 @@ memory) → a **compression ratio** that ranks *update rules* by how well the re
 | plain Gated-DeltaNet (gated delta) | 6.29 | 10.7 | **10.17** |
 | MoM Gated-DeltaNet (mixture) | 31.46 | 11.0 | 2.11 |
 
-![stored vs used, both models](notebooks/stored_vs_used_results/stored_vs_used.png)
+![stored vs used, both models](260720_stage0_capacity_diagnostics/stored_vs_used_results/stored_vs_used.png)
 
 - **SSD ≈ plain gated-delta** per unit memory (~10–11 bits/Mfloat). Mamba-2's higher *raw* capacity
   (23 vs 11) is mostly because its state is ~2× larger (12.6 vs 6.3 Mfloat); capacity scales ~linearly
@@ -121,7 +121,7 @@ theoretical maximum. A `B/C`-aware probe or a recurrent-state SAE is needed to s
 
 ---
 
-## 5. eRank ⊥ recall across update rules (`notebooks/pretrained_decay_mqar.py`)
+## 5. eRank ⊥ recall across update rules (`260720_stage0_capacity_diagnostics/pretrained_decay_mqar.py`)
 In-context MQAR (recall + normalized state eRank vs load N) on **5 pretrained update rules**.
 [`gdn2-370m` (lit_gpt) deferred — its dscpkg chunk kernel calls fla `chunk_gla_fwd_o_gk(use_exp2=)`,
 absent in fla 0.5.1, so it crashes for `q_len>64`; the gated-delta point is covered by `gdn-plain-340m`.]
@@ -134,7 +134,7 @@ absent in fla 0.5.1, so it crashes for `q_len>64`; the gated-delta point is cove
 | gated-linear — `gla-1.3B` (decay) | 0.21 | 0.083 |
 | fixed-decay — `retnet-1.3B` | **0.08 (worst)** | 0.180 |
 
-![recall vs eRank across update rules](notebooks/decay_mqar_results/decay_mqar.png)
+![recall vs eRank across update rules](260720_stage0_capacity_diagnostics/decay_mqar_results/decay_mqar.png)
 
 - **eRank does not predict recall.** Gated-delta and RetNet have ~**identical** eRank (0.181 vs 0.180) yet
   **opposite** recall (0.47 vs 0.08). Across the five, eRank (0.08–0.18) and recall (0.08–0.47) orderings

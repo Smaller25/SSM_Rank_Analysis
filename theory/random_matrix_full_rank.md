@@ -39,7 +39,7 @@
 
 ## 5. 이 프로젝트와의 함의 — **algebraic rank ≠ effective rank** ⚠️
 
-우리 작업([[../notebooks/capacity_utils.py]]의 `effective_rank`, S1)은 가중치가 아니라 **recurrent state**의
+우리 작업([[../260720_stage0_capacity_diagnostics/capacity_utils.py]]의 `effective_rank`, S1)은 가중치가 아니라 **recurrent state**의
 **effective rank(eRank = exp(정규화 특이값 스펙트럼의 Shannon 엔트로피))**를 잰다. 핵심 구분:
 
 - 무작위 행렬은 a.s. **full *algebraic* rank** (특이값이 모두 ≠ 0) — 하지만 특이값이 **균일하지 않으면**

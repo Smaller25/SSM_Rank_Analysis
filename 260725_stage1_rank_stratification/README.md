@@ -30,7 +30,7 @@ back to the synthetic corpus, `verdict.G1a` is forced **INVALID (`null`)** and r
 - `data_stage1.py` — WikiText-103 / GitHub / arXiv (≥16 seqs × 1024–2048) + App.D attacks ×2.
   HF parquet-native; deterministic synthetic fallback if offline (flagged `source=fallback` +
   `is_fallback=True` — this trips the fix-4 authenticity gate).
-- `loader_gdn2.py` — thin adapter over `260722_exp/common.py` (canonical gdn2-1.3B loader [PIN-1],
+- `loader_gdn2.py` — thin adapter over `legacy/legacy/260722_exp/common.py` (canonical gdn2-1.3B loader [PIN-1],
   **100B checkpoint enforced**: 10B rejected, 95B accepted). a_t capture = kernel-intercept on
   `fused_recurrent_gdn2` (`a_t = exp(g)`) with a deterministic reconstruction fallback; adds a
   per-head r̄ decay probe.

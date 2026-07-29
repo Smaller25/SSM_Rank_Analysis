@@ -7,16 +7,16 @@ reproduction, and confirm nothing must be re-implemented that already exists.
 
 | Asset | Path | Reused for |
 |---|---|---|
-| **Canonical gdn2-1.3B loader** | `260722_exp/common.py` (`load_model`, `Bundle`, `CONFIG_NAME="gdn2_1.3B"`) | [PIN-1] model load: lit_gpt `Config.from_name`, `strict=False`, bf16, `fused_recurrent`, `GatedDeltaNet2.forward` monkeypatch + shared `fla.models.utils.Cache` -> per-head `recurrent_state` `{layer:(heads,dk,dv)}`. `loader_gdn2.py` imports this directly; does NOT re-implement. |
-| **entropy eRank / stable rank** | `notebooks/capacity_utils.py` (`effective_rank`, `stable_rank`) | [PIN-3] `rank_metrics.py` imports these verbatim (no re-implementation). |
-| **prefix-sweep state trajectory** | `260722_exp/analysis.py` (`state_trajectory`) | [B] time-consistency: same prefix `[:t]` re-run pattern -> per-t per-head rank vectors. |
-| **domain data-loader pattern** | `260722_exp/data.py` (`make_*(tok)->ids`) | [3] `data_stage1.py` follows the same `make_*` signature; adds 3 public domains + App.D attacks. |
+| **Canonical gdn2-1.3B loader** | `legacy/legacy/260722_exp/common.py` (`load_model`, `Bundle`, `CONFIG_NAME="gdn2_1.3B"`) | [PIN-1] model load: lit_gpt `Config.from_name`, `strict=False`, bf16, `fused_recurrent`, `GatedDeltaNet2.forward` monkeypatch + shared `fla.models.utils.Cache` -> per-head `recurrent_state` `{layer:(heads,dk,dv)}`. `loader_gdn2.py` imports this directly; does NOT re-implement. |
+| **entropy eRank / stable rank** | `260720_stage0_capacity_diagnostics/capacity_utils.py` (`effective_rank`, `stable_rank`) | [PIN-3] `rank_metrics.py` imports these verbatim (no re-implementation). |
+| **prefix-sweep state trajectory** | `legacy/260722_exp/analysis.py` (`state_trajectory`) | [B] time-consistency: same prefix `[:t]` re-run pattern -> per-t per-head rank vectors. |
+| **domain data-loader pattern** | `legacy/legacy/260722_exp/data.py` (`make_*(tok)->ids`) | [3] `data_stage1.py` follows the same `make_*` signature; adds 3 public domains + App.D attacks. |
 | **model setup gotchas** | `MODEL_SETUP.md` §3 | gdn2 load: `layer_idx` manual set, monkeypatch cache, bf16, TinyLlama tokenizer, state shape `(1,16,128,128)` for 370m. |
-| **Stage 2/3 skeletons (DO NOT TOUCH — G1a-gated [PIN-7])** | `notebooks/mqar_fromscratch.py`, `notebooks/pretrained_decay_mqar.py` (`make_mqar`), `260722_exp/niah_ruler.py` (S-NIAH GT) | planted-MQAR + S-NIAH for Stage 2/3 — not started. |
+| **Stage 2/3 skeletons (DO NOT TOUCH — G1a-gated [PIN-7])** | `260720_stage0_capacity_diagnostics/mqar_fromscratch.py`, `260720_stage0_capacity_diagnostics/pretrained_decay_mqar.py` (`make_mqar`), `legacy/legacy/260722_exp/niah_ruler.py` (S-NIAH GT) | planted-MQAR + S-NIAH for Stage 2/3 — not started. |
 
 ## Assets NOT present locally (VESSL /root only)
 - `nb3_F6F7_decomposition_1p3B.py` — the "nb3" the spec extends. **Not in the repo locally.** Its
-  loader/state-capture logic is fully captured by `260722_exp/common.py` (same monkeypatch pattern),
+  loader/state-capture logic is fully captured by `legacy/legacy/260722_exp/common.py` (same monkeypatch pattern),
   which is what Stage 1 builds on. F6/F7 decomposition (entropy eRank + r̄) is re-derived here.
 - `rebuild/F6_1p3B_data.npy` (per-head r̄ + entropy eRank) — VESSL-only cache. Per the plan, we
   **re-log rather than reuse** (avoids settings drift). No local cache dependency.

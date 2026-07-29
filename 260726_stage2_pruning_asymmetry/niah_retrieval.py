@@ -28,7 +28,7 @@ import numpy as np
 import torch
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_260722 = os.path.abspath(os.path.join(_HERE, "..", "260722_exp"))
+_260722 = os.path.abspath(os.path.join(_HERE, "..", "legacy", "260722_exp"))
 for _p in (_HERE, _260722):
     if _p not in sys.path:
         sys.path.insert(0, _p)

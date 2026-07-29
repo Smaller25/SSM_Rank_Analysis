@@ -35,8 +35,8 @@ import torch
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _COMMON_CANDS = [
-    os.path.join(_HERE, "..", "260722_exp"),
-    os.path.join(_HERE, "..", "..", "260722_exp"),
+    os.path.join(_HERE, "..", "legacy", "260722_exp"),
+    os.path.join(_HERE, "..", "legacy", "260722_exp"),
 ]
 for _c in _COMMON_CANDS:
     _c = os.path.abspath(_c)

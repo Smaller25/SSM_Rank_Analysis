@@ -107,7 +107,7 @@ primary 대조 논문: arXiv:2602.02195 "State Rank Dynamics in Linear Attention
 - target 라인 전사 정확(minor): stage2_pruning.py:270-273의 origin 93.8/high 90.6/low 46.9/KV 38.9%가 Qwen3-Next-Instruct row와 일치(PDF page 5, Table 1). 48층도 확인(PDF page 3). Thinking row(90.6→62.5→43.8)에선 고랭크 절제도 상당한 하락 — 'high-rank barely moves' framing은 Instruct-specific. 방향성 asymmetry(low >> high)는 양 row 모두 성립.
 - random 대조 부재 확인(minor, 강점): WebFetch로 논문에 random-pruning baseline 없음 확인. 하네스의 count-matched 랜덤 arm은 논문이 남긴 gap을 닫는 원저·정당한 대조.
 
-eval harness lineage: NVIDIA RULER S-NIAH / niah_multikey_1 (Apache-2.0, lm-evaluation-harness), 260722_exp/niah_ruler.py에 verbatim 복제. GatedDeltaNet2 아키텍처: arXiv:2605.22791. 그라운드-트루스 마스킹 사이트: `/home/sohyung/long-gdn/dsc/lit_gpt/gdn2.py` forward.
+eval harness lineage: NVIDIA RULER S-NIAH / niah_multikey_1 (Apache-2.0, lm-evaluation-harness), legacy/260722_exp/niah_ruler.py에 verbatim 복제. GatedDeltaNet2 아키텍처: arXiv:2605.22791. 그라운드-트루스 마스킹 사이트: `/home/sohyung/long-gdn/dsc/lit_gpt/gdn2.py` forward.
 
 ## 실행 전 체크리스트
 

@@ -55,7 +55,7 @@ VESSL A100 단일 GPU. 재시작 시 `/root` 초기화 → `bash /root/smaller/s
 |---|---|---|---|
 | code-correctness / alignment | r̄ decay probe가 실제 gdn2에서 a_t를 절대 캡처하지 못함 — gdn2가 decay를 모듈 속성으로 저장하지 않아 [C] r̄ 회귀(G1b)가 매 실런마다 조용히 skip | `loader_gdn2.py:89-136` (probe), `_DECAY_ATTR_CANDS`(49); 실 forward는 `/home/sohyung/long-gdn/dsc/lit_gpt/gdn2.py:311-324` | 속성 스크래핑을 버리고 forward 지역변수 g를 monkeypatch로 캡처하거나 A_log+dt_bias로 재구성: `g = -exp(A_log).repeat_interleave(head_k_dim)*softplus(f_proj(h)+dt_bias)`, r̄=exp(E[g]) |
 | code-smoke / code-repro / literature / alignment | NameError: main()의 bare `CONFIG_NAME` — 실 VESSL 런이 모델 로드 직전 크래시(smoke는 조기 return이라 은폐) | `stage1_repro.py:408` | `loader_gdn2.CONFIG_NAME` 참조로 교체하거나 import 추가 |
-| code-repro | [PIN-1] 위반 — checkpoint-10B 미해결 시 다른 체크포인트(HF model-95b)로 조용히 폴백, loader 독스트링의 'assert on resolved path'가 코드에 부재 | `loader_gdn2.py:139` / `260722_exp/common.py:50,85-101` | resolved realpath가 정확히 checkpoint-10B인지 assert, 미해결 시 raise, 해결경로+크기+sha256을 report에 기록 |
+| code-repro | [PIN-1] 위반 — checkpoint-10B 미해결 시 다른 체크포인트(HF model-95b)로 조용히 폴백, loader 독스트링의 'assert on resolved path'가 코드에 부재 | `loader_gdn2.py:139` / `legacy/legacy/260722_exp/common.py:50,85-101` | resolved realpath가 정확히 checkpoint-10B인지 assert, 미해결 시 raise, 해결경로+크기+sha256을 report에 기록 |
 | resources | 멀티-forward 로깅 런이 마지막에 단 1회만 결과 기록 — 중단 시 전량 손실, 체크포인트 없음 | `stage1_repro.py:372-424` | 도메인 완료마다 `partial_<dom>.json`으로 증분 flush, 재시작 시 완료 도메인 skip/load, `os._exit(0)` 전 fsync 보장 |
 
 > 주: resources 리뷰어가 "증분 저장 부재"를 blocker로 별도 제기했으며(위 4번째 행), 이는 자동 수정 목록에 명시되지 않았다. 코드 정확성 관점 블로커 4종은 수정됐으나, 이 증분-저장 blocker는 실행 전 반드시 반영을 확인하라.
